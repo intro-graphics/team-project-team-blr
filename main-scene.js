@@ -1,49 +1,49 @@
-import {tiny, defs} from './examples/common.js';
-                                                  // Pull these names into this module's scope for convenience:
-const { Vector, Vector3, vec, vec3, vec4, color, Matrix, Mat4, Light, Shape, Material, Shader, Texture, Scene,
-        Canvas_Widget, Code_Widget, Text_Widget } = tiny;
+window.Basketball_Scene = window.classes.Basketball_Scene =
+class Basketball_Scene extends Scene_Component
+  { constructor( context, control_box )     // The scene begins by requesting the camera, shapes, and materials it will need.
+      { super(   context, control_box );    // First, include a secondary Scene that provides movement controls:
+        if( !context.globals.has_controls   ) 
+          context.register_scene_component( new Movement_Controls( context, control_box.parentElement.insertCell() ) ); 
 
-    // Now we have loaded everything in the files tiny-graphics.js, tiny-graphics-widgets.js, and common.js.
-    // This yielded "tiny", an object wrapping the stuff in the first two files, and "defs" for wrapping all the rest.
+        context.globals.graphics_state.camera_transform = Mat4.look_at( Vec.of( 0,10,20 ), Vec.of( 0,0,0 ), Vec.of( 0,1,0 ) );
+        this.initial_camera_location = Mat4.inverse( context.globals.graphics_state.camera_transform );
 
-    // ******************** Extra step only for when executing on a local machine:  
-    //                      Load any more files in your directory and copy them into "defs."
-    //                      (On the web, a server should instead just pack all these as well 
-    //                      as common.js into one file for you, such as "dependencies.js")
+        const r = context.width/context.height;
+        context.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, r, .1, 1000 );
 
-const Minimal_Webgl_Demo = defs.Minimal_Webgl_Demo;
-import { Axes_Viewer, Axes_Viewer_Test_Scene } 
-  from "./examples/axes-viewer.js"
-import { Inertia_Demo, Collision_Demo }
-  from "./examples/collisions-demo.js"
-import { Many_Lights_Demo }
-  from "./examples/many-lights-demo.js"
-import { Obj_File_Demo }
-  from "./examples/obj-file-demo.js"
-import { Scene_To_Texture_Demo }
-  from "./examples/scene-to-texture-demo.js"
-import { Surfaces_Demo }
-  from "./examples/surfaces-demo.js"
-import { Text_Demo }
-  from "./examples/text-demo.js"
-import { Transforms_Sandbox }
-  from "./examples/transforms-sandbox.js"
+        const shapes = { torus:  new Torus( 15, 15 ),
+                         torus2: new ( Torus.prototype.make_flat_shaded_version() )( 15, 15 ),
+                         sphere4: new Subdivision_Sphere( 4 ),
+                       }
 
-Object.assign( defs,
-                     { Axes_Viewer, Axes_Viewer_Test_Scene },
-                     { Inertia_Demo, Collision_Demo },
-                     { Many_Lights_Demo },
-                     { Obj_File_Demo },
-                     { Scene_To_Texture_Demo },
-                     { Surfaces_Demo },
-                     { Text_Demo },
-                     { Transforms_Sandbox } );
+        this.submit_shapes( context, shapes );
+                                     
+                                     // Make some Material objects available to you:
+        this.materials =
+          { test:     context.get_instance( Phong_Shader ).material( Color.of( 1,1,0,1 ), { ambient:.2 } ),
+            //ring:     context.get_instance( Ring_Shader  ).material(),
+          }
 
-    // ******************** End extra step
+        this.lights = [ new Light( Vec.of( 5,-10,5,1 ), Color.of( 0, 1, 1, 1 ), 1000 ) ];
 
-// (Can define Main_Scene's class here)
+      }
 
-const Main_Scene = Obj_File_Demo;
-const Additional_Scenes = [];
+    make_control_panel()            // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
+      { this.key_triggered_button( "View solar system",  [ "0" ], () => this.attached = () => this.initial_camera_location );
+        this.new_line();
+        this.key_triggered_button( "Attach to planet 1", [ "1" ], () => this.attached = () => this.planet_1 );
+        this.key_triggered_button( "Attach to planet 2", [ "2" ], () => this.attached = () => this.planet_2 ); this.new_line();
+        this.key_triggered_button( "Attach to planet 3", [ "3" ], () => this.attached = () => this.planet_3 );
+        this.key_triggered_button( "Attach to planet 4", [ "4" ], () => this.attached = () => this.planet_4 ); this.new_line();
+        this.key_triggered_button( "Attach to planet 5", [ "5" ], () => this.attached = () => this.planet_5 );
+        this.key_triggered_button( "Attach to moon",     [ "m" ], () => this.attached = () => this.moon     );
+      }
 
-export { Main_Scene, Additional_Scenes, Canvas_Widget, Code_Widget, Text_Widget, defs }
+    display( graphics_state )
+      { graphics_state.lights = this.lights;        // Use the lights stored in this.lights.
+        const t = graphics_state.animation_time / 1000, dt = graphics_state.animation_delta_time / 1000;
+
+        this.shapes.torus2.draw( graphics_state, Mat4.identity(), this.materials.test );
+
+      }
+  }

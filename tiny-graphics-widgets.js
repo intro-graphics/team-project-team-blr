@@ -1,431 +1,492 @@
-// This file defines a lot of panels that can be placed on websites to create interactive graphics programs that use tiny-graphics.js.
-
-import {tiny} from './tiny-graphics.js';
-const { color, Scene } = tiny;           // Pull these names into this module's scope for convenience.
-
-export const widgets = {};
-
-const Canvas_Widget = widgets.Canvas_Widget =
-class Canvas_Widget
-{                           // **Canvas_Widget** embeds a WebGL demo onto a website in place of the given placeholder document
-                            // element.  It creates a WebGL canvas and loads onto it any initial Scene objects in the 
-                            // arguments.  Optionally spawns a Text_Widget and Controls_Widget for showing more information
-                            // or interactive UI buttons, divided into one panel per each loaded Scene.  You can use up to
-                            // 16 Canvas_Widgets; browsers support up to 16 WebGL contexts per page.
-  constructor( element, initial_scenes, options = {} )   
-    { this.element = element;
-
-      const defaults = { show_canvas: true, make_controls: true, show_explanation: true, 
-                         make_editor: false, make_code_nav: true };
-      if( initial_scenes && initial_scenes[0] )
-        Object.assign( options, initial_scenes[0].widget_options );
-      Object.assign( this, defaults, options )
-      
-      const rules = [ ".canvas-widget { width: 1080px; background: DimGray; margin:auto }",
-                      ".canvas-widget canvas { width: 1080px; height: 600px; margin-bottom:-3px }" ];
-                      
-      if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
-      for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
-
-                              // Fill in the document elements:
-      if( this.show_explanation )
-      { this.embedded_explanation_area = this.element.appendChild( document.createElement( "div" ) );
-        this.embedded_explanation_area.className = "text-widget";
-      }
-
-      const canvas = this.element.appendChild( document.createElement( "canvas" ) );
-
-      if( this.make_controls )
-      { this.embedded_controls_area    = this.element.appendChild( document.createElement( "div" ) );
-        this.embedded_controls_area.className = "controls-widget";
-      }
-
-      if( this.make_code_nav )
-      { this.embedded_code_nav_area    = this.element.appendChild( document.createElement( "div" ) );
-        this.embedded_code_nav_area.className = "code-widget";
-      }
-
-      if( this.make_editor )
-      { this.embedded_editor_area      = this.element.appendChild( document.createElement( "div" ) );
-        this.embedded_editor_area.className = "editor-widget";
-      }
-
-      if( !this.show_canvas )
-        canvas.style.display = "none";
-
-      this.webgl_manager = new tiny.Webgl_Manager( canvas, color( 0,0,0,1 ) );  // Second parameter sets background color.
-
-
-                           // Add scenes and child widgets
-      if( initial_scenes )
-        this.webgl_manager.scenes.push( ...initial_scenes );
-
-      const primary_scene = initial_scenes ? initial_scenes[0] : undefined;
-      const additional_scenes = initial_scenes ? initial_scenes.slice(1) : [];
-      const primary_scene_definiton = primary_scene ? primary_scene.constructor : undefined;
-      if( this.show_explanation )
-        this.embedded_explanation  = new Text_Widget( this.embedded_explanation_area, this.webgl_manager.scenes, this.webgl_manager );
-      if( this.make_controls )
-        this.embedded_controls     = new Controls_Widget( this.embedded_controls_area, this.webgl_manager.scenes );
-      if( this.make_editor )
-        this.embedded_editor       = new Editor_Widget( this.embedded_editor_area, primary_scene_definiton, this );
-      if( this.make_code_nav )
-        this.embedded_code_nav     = new Code_Widget( this.embedded_code_nav_area, primary_scene_definiton, 
-                                     additional_scenes, { associated_editor: this.embedded_editor } );
-
-                                       // Start WebGL initialization.  Note that render() will re-queue itself for continuous calls.
-      this.webgl_manager.render();
+window.Triangle = window.classes.Triangle =
+class Triangle extends Shape    // The simplest possible Shape – one triangle.  It has 3 vertices, each
+{ constructor()                 // having their own 3D position, normal vector, and texture-space coordinate.
+    { super( "positions", "normals", "texture_coords" );                       // Name the values we'll define per each vertex.
+                                  // First, specify the vertex positions -- the three point locations of an imaginary triangle.
+                                  // Next, supply vectors that point away from the triangle face.  They should match up with the points in 
+                                  // the above list.  Normal vectors are needed so the graphics engine can know if the shape is pointed at 
+                                  // light or not, and color it accordingly.  lastly, put each point somewhere in texture space too.
+      this.positions      = [ Vec.of(0,0,0), Vec.of(1,0,0), Vec.of(0,1,0) ];
+      this.normals        = [ Vec.of(0,0,1), Vec.of(0,0,1), Vec.of(0,0,1) ];
+      this.texture_coords = [ Vec.of(0,0),   Vec.of(1,0),   Vec.of(0,1)   ]; 
+      this.indices        = [ 0, 1, 2 ];                         // Index into our vertices to connect them into a whole triangle.
+                 // A position, normal, and texture coord fully describes one "vertex".  What's the "i"th vertex?  Simply the combined data 
+                 // you get if you look up index "i" of those lists above -- a position, normal vector, and tex coord together.  Lastly we
+                 // told it how to connect vertex entries into triangles.  Every three indices in "this.indices" traces out one triangle.
     }
 }
 
 
-const Controls_Widget = widgets.Controls_Widget =
-class Controls_Widget
-{                                               // **Controls_Widget** adds an array of panels to the document, one per loaded
-                                                // Scene object, each providing interactive elements such as buttons with key 
-                                                // bindings, live readouts of Scene data members, etc.
-  constructor( element, scenes )
-    { const rules = [ ".controls-widget * { font-family: monospace }",
-                      ".controls-widget div { background: white }",
-                      ".controls-widget table { border-collapse: collapse; display:block; overflow-x: auto; }",
-                      ".controls-widget table.control-box { width: 1080px; border:0; margin:0; max-height:380px; transition:.5s; overflow-y:scroll; background:DimGray }",
-                      ".controls-widget table.control-box:hover { max-height:500px }",
-                      ".controls-widget table.control-box td { overflow:hidden; border:0; background:DimGray; border-radius:30px }",
-                      ".controls-widget table.control-box td .control-div { background: #EEEEEE; height:338px; padding: 5px 5px 5px 30px; box-shadow: 25px 0px 60px -15px inset }",
-                      ".controls-widget table.control-box td * { background:transparent }",
-                      ".controls-widget table.control-box .control-div td { border-radius:unset }",
-                      ".controls-widget table.control-box .control-title { padding:7px 40px; color:white; background:DarkSlateGray; box-shadow: 25px 0px 70px -15px inset black }",
-                      ".controls-widget *.live_string { display:inline-block; background:unset }",
-                      ".dropdown { display:inline-block }",
-                      ".dropdown-content { display:inline-block; transition:.2s; transform: scaleY(0); overflow:hidden; position: absolute; \
-                                            z-index: 1; background:#E8F6FF; padding: 16px; margin-left:30px; min-width: 100px; \
-                                            box-shadow: 5px 10px 16px 0px rgba(0,0,0,0.2) inset; border-radius:10px }",
-                      ".dropdown-content a { color: black; padding: 4px 4px; display: block }",
-                      ".dropdown a:hover { background: #f1f1f1 }",
-                      ".controls-widget button { background: #4C9F50; color: white; padding: 6px; border-radius:9px; \
-                                                box-shadow: 4px 6px 16px 0px rgba(0,0,0,0.3); transition: background .3s, transform .3s }",
-                      ".controls-widget button:hover, button:focus { transform: scale(1.3); color:gold }",
-                      ".link { text-decoration:underline; cursor: pointer }",
-                      ".show { transform: scaleY(1); height:200px; overflow:auto }",
-                      ".hide { transform: scaleY(0); height:0px; overflow:hidden  }" ];
-                      
-      const style = document.head.appendChild( document.createElement( "style" ) );
-      for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
-
-      const table = element.appendChild( document.createElement( "table" ) );
-      table.className = "control-box";
-      this.row = table.insertRow( 0 );
-
-      this.panels = [];
-      this.scenes = scenes;
-
-      this.render();
+window.Square = window.classes.Square =
+class Square extends Shape              // A square, demonstrating two triangles that share vertices.  On any planar surface, the interior 
+                                        // edges don't make any important seams.  In these cases there's no reason not to re-use data of
+{                                       // the common vertices between triangles.  This makes all the vertex arrays (position, normals, 
+  constructor()                         // etc) smaller and more cache friendly.
+    { super( "positions", "normals", "texture_coords" );                                   // Name the values we'll define per each vertex.
+      this.positions     .push( ...Vec.cast( [-1,-1,0], [1,-1,0], [-1,1,0], [1,1,0] ) );   // Specify the 4 square corner locations.
+      this.normals       .push( ...Vec.cast( [0,0,1],   [0,0,1],  [0,0,1],  [0,0,1] ) );   // Match those up with normal vectors.
+      this.texture_coords.push( ...Vec.cast( [0,0],     [1,0],    [0,1],    [1,1]   ) );   // Draw a square in texture coordinates too.
+      this.indices       .push( 0, 1, 2,     1, 3, 2 );                   // Two triangles this time, indexing into four distinct vertices.
     }
-  make_panels( time )
-    { this.timestamp = time;
-      this.row.innerHTML = "";
-                                                        // Traverse all scenes and their children, recursively:
-      const open_list = [ ...this.scenes ];
-      while( open_list.length )                       
-      { open_list.push( ...open_list[0].children );
-        const scene = open_list.shift();
+}
 
-        const control_box = this.row.insertCell();
-        this.panels.push( control_box );
-                                                                                        // Draw top label bar:
-        control_box.appendChild( Object.assign( document.createElement("div"), { 
-                                      textContent: scene.constructor.name, className: "control-title" } ) )
 
-        const control_panel = control_box.appendChild( document.createElement( "div" ) );
-        control_panel.className = "control-div";
-        scene.control_panel = control_panel;
-        scene.timestamp = time;
-                                                        // Draw each registered animation:
-        scene.make_control_panel();                     
+window.Tetrahedron = window.classes.Tetrahedron =
+class Tetrahedron extends Shape                       // The Tetrahedron shape demonstrates flat vs smooth shading (a boolean argument 
+{ constructor( using_flat_shading )                   // selects which one).  It is also our first 3D, non-planar shape.
+    { super( "positions", "normals", "texture_coords" );
+      var a = 1/Math.sqrt(3);
+      if( !using_flat_shading )                                 // Method 1:  A tetrahedron with shared vertices.  Compact, performs better,
+      {                                                         // but can't produce flat shading or discontinuous seams in textures.
+          this.positions     .push( ...Vec.cast( [ 0, 0, 0], [1,0,0], [0,1,0], [0,0,1] ) );          
+          this.normals       .push( ...Vec.cast( [-a,-a,-a], [1,0,0], [0,1,0], [0,0,1] ) );          
+          this.texture_coords.push( ...Vec.cast( [ 0, 0   ], [1,0  ], [0,1, ], [1,1  ] ) );
+          this.indices       .push( 0, 1, 2,   0, 1, 3,   0, 2, 3,    1, 2, 3 );  // Vertices are shared multiple times with this method.
       }
-    }
-  render( time = 0 )
-    {                       // Check to see if we need to re-create the panels due to any scene being new.                      
-                            // Traverse all scenes and their children, recursively:
-      const open_list = [ ...this.scenes ];
-      while( open_list.length )                       
-      { open_list.push( ...open_list[0].children );
-        const scene = open_list.shift();
-        if( !scene.timestamp || scene.timestamp > this.timestamp )        
-        { this.make_panels( time );
-          break;
-        }
-
-        // TODO: Check for updates to each scene's desired_controls_position, including if the 
-        // scene just appeared in the tree, in which case call make_control_panel().
-      }
-
-      for( let panel of this.panels )
-        for( let live_string of panel.querySelectorAll(".live_string") ) live_string.onload( live_string );
-                                          // TODO: Cap this so that it can't be called faster than a human can read?
-      this.event = window.requestAnimFrame( this.render.bind( this ) );
-    }
-}
-
-
-const Code_Manager = widgets.Code_Manager =
-class Code_Manager                     
-{                                  // **Code_Manager** breaks up a string containing code (any ES6 JavaScript).  The RegEx being used
-                                   // to parse is from https://github.com/lydell/js-tokens which states the following limitation:
-                                   // "If the end of a statement looks like a regex literal (even if it isn’t), it will be treated
-                                   // as one."  (This can miscolor lines of code containing divisions and comments).
-  constructor( code )
-    { const es6_tokens_parser = RegExp( [
-        /((['"])(?:(?!\2|\\).|\\(?:\r\n|[\s\S]))*(\2)?|`(?:[^`\\$]|\\[\s\S]|\$(?!\{)|\$\{(?:[^{}]|\{[^}]*\}?)*\}?)*(`)?)/,    // Any string.
-        /(\/\/.*)|(\/\*(?:[^*]|\*(?!\/))*(\*\/)?)/,                                                                           // Any comment (2 forms).  And next, any regex:
-        /(\/(?!\*)(?:\[(?:(?![\]\\]).|\\.)*\]|(?![\/\]\\]).|\\.)+\/(?:(?!\s*(?:\b|[\u0080-\uFFFF$\\'"~({]|[+\-!](?!=)|\.?\d))|[gmiyu]{1,5}\b(?![\u0080-\uFFFF$\\]|\s*(?:[+\-*%&|^<>!=?({]|\/(?![\/*])))))/,
-        /(0[xX][\da-fA-F]+|0[oO][0-7]+|0[bB][01]+|(?:\d*\.\d+|\d+\.?)(?:[eE][+-]?\d+)?)/,                                     // Any number.
-        /((?!\d)(?:(?!\s)[$\w\u0080-\uFFFF]|\\u[\da-fA-F]{4}|\\u\{[\da-fA-F]+\})+)/,                                          // Any name.
-        /(--|\+\+|&&|\|\||=>|\.{3}|(?:[+\-\/%&|^]|\*{1,2}|<{1,2}|>{1,3}|!=?|={1,2})=?|[?~.,:;[\](){}])/,                      // Any punctuator.
-        /(\s+)|(^$|[\s\S])/                                                                                                   // Any whitespace. Lastly, blank/invalid.
-          ].map( r => r.source ).join('|'), 'g' );
-
-      this.tokens = [];    this.no_comments = [];    let single_token = null;
-      while( ( single_token = es6_tokens_parser.exec( code ) ) !== null )
-        { let token = { type: "invalid", value: single_token[0] }
-               if ( single_token[  1 ] ) token.type = "string" , token.closed = !!( single_token[3] || single_token[4] )
-          else if ( single_token[  5 ] ) token.type = "comment"
-          else if ( single_token[  6 ] ) token.type = "comment", token.closed = !!single_token[7]
-          else if ( single_token[  8 ] ) token.type = "regex"
-          else if ( single_token[  9 ] ) token.type = "number"
-          else if ( single_token[ 10 ] ) token.type = "name"
-          else if ( single_token[ 11 ] ) token.type = "punctuator"
-          else if ( single_token[ 12 ] ) token.type = "whitespace"        
-          this.tokens.push( token )
-          if( token.type != "whitespace" && token.type != "comment" ) this.no_comments.push( token.value );
-        }  
-    }
-}
-
-
-const Code_Widget = widgets.Code_Widget =
-class Code_Widget
-{                                         // **Code_Widget** draws a code navigator panel with inline links to the entire program source code.
-  constructor( element, main_scene, additional_scenes, options = {} )
-    { const rules = [ ".code-widget .code-panel { margin:auto; background:white; overflow:auto; font-family:monospace; width:1060px; padding:10px; padding-bottom:40px; max-height: 500px; \
-                                                      border-radius:12px; box-shadow: 20px 20px 90px 0px powderblue inset, 5px 5px 30px 0px blue inset }",
-                    ".code-widget .code-display { min-width:1200px; padding:10px; white-space:pre-wrap; background:transparent }",
-                    ".code-widget table { display:block; margin:auto; overflow-x:auto; width:1080px; border-radius:25px; border-collapse:collapse; border: 2px solid black }",
-                    ".code-widget table.class-list td { border-width:thin; background: #EEEEEE; padding:12px; font-family:monospace; border: 1px solid black }"
-                     ];
-
-      if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
-      for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
-
-      this.associated_editor_widget = options.associated_editor;
-
-      if( !main_scene )
-        return;
-
-      import( './main-scene.js' )
-        .then( module => { 
-        
-          this.build_reader(      element, main_scene, additional_scenes, module.defs );
-          if( !options.hide_navigator )
-            this.build_navigator( element, main_scene, additional_scenes, module.defs );
-        } )
-    }
-  build_reader( element, main_scene, additional_scenes, definitions )
-    {                                           // (Internal helper function)      
-      this.definitions = definitions;
-      const code_panel = element.appendChild( document.createElement( "div" ) );
-      code_panel.className = "code-panel";
-//       const text        = code_panel.appendChild( document.createElement( "p" ) );
-//       text.textContent  = "Code for the above scene:";
-      this.code_display = code_panel.appendChild( document.createElement( "div" ) );
-      this.code_display.className = "code-display";
-                                                                            // Default textbox contents:
-      this.display_code( main_scene );
-    }
-  build_navigator( element, main_scene, additional_scenes, definitions )
-    {                                           // (Internal helper function)
-      const class_list = element.appendChild( document.createElement( "table" ) );
-      class_list.className = "class-list";   
-      const top_cell = class_list.insertRow( -1 ).insertCell( -1 );
-      top_cell.colSpan = 2;
-      top_cell.appendChild( document.createTextNode("Click below to navigate through all classes that are defined.") );
-      const content = top_cell.appendChild( document.createElement( "p" ) );
-      content.style = "text-align:center; margin:0; font-weight:bold";
-      content.innerHTML = "main-scene.js<br>Main Scene: ";
-      const main_scene_link = content.appendChild( document.createElement( "a" ) );
-      main_scene_link.href = "javascript:void(0);"
-      main_scene_link.addEventListener( 'click', () => this.display_code( main_scene ) );
-      main_scene_link.textContent = main_scene.name;
-
-      const second_cell = class_list.insertRow( -1 ).insertCell( -1 );
-      second_cell.colSpan = 2;
-      second_cell.style = "text-align:center; font-weight:bold";
-      const index_src_link = second_cell.appendChild( document.createElement( "a" ) );
-      index_src_link.href = "javascript:void(0);"
-      index_src_link.addEventListener( 'click', () => this.display_code() );
-      index_src_link.textContent = "This page's complete HTML source";
-
-      const third_row = class_list.insertRow( -1 );
-      third_row.style = "text-align:center";
-      third_row.innerHTML = "<td><b>tiny-graphics.js</b><br>(Always the same)</td> \
-                             <td><b>All other class definitions from dependencies:</td>";
-
-      const fourth_row = class_list.insertRow( -1 );
-                                                                            // Generate the navigator table of links:
-      for( let list of [ tiny, definitions ] )
-      { const cell = fourth_row.appendChild( document.createElement( "td" ) );
-                                              // List all class names except the main one, which we'll display separately:
-        const class_names = Object.keys( list ).filter( x => x != main_scene.name );
-        cell.style = "white-space:normal"
-        for( let name of class_names )
-        { const class_link = cell.appendChild( document.createElement( "a" ) );
-          class_link.style["margin-right"] = "80px"
-          class_link.href = "javascript:void(0);"
-          class_link.addEventListener( 'click', () => this.display_code( tiny[name] || definitions[name] ) );
-          class_link.textContent = name;
-          cell.appendChild( document.createTextNode(" ") );
-        }
-      }
-    }
-  display_code( class_to_display )
-    {                                           // display_code():  Populate the code textbox.
-                                                // Pass undefined to choose index.html source.
-      if( this.associated_editor_widget ) 
-        this.associated_editor_widget.select_class( class_to_display );
-      if( class_to_display ) this.format_code( class_to_display.toString() );
-      else fetch( document.location.href )
-                .then(   response => response.text() )
-                .then( pageSource => this.format_code( pageSource ) );
-    }
-  format_code( code_string )
-    {                                           // (Internal helper function)
-      this.code_display.innerHTML = "";
-      const color_map = { string: "chocolate", comment: "green", regex: "blue", number: "magenta", 
-                            name: "black", punctuator: "red", whitespace: "black" };
-
-      for( let t of new Code_Manager( code_string ).tokens )
-        if( t.type == "name" && [ ...Object.keys( tiny ), ...Object.keys( this.definitions ) ].includes( t.value ) )
-          { const link = this.code_display.appendChild( document.createElement( 'a' ) );
-            link.href = "javascript:void(0);"
-            link.addEventListener( 'click', () => this.display_code( tiny[t.value] || this.definitions[t.value] ) );
-            link.textContent = t.value;
-          }
-        else
-          { const span = this.code_display.appendChild( document.createElement( 'span' ) );
-            span.style.color = color_map[t.type];
-            span.textContent = t.value;
-          }
-    }
-}
-
-
-const Editor_Widget = widgets.Editor_Widget =
-class Editor_Widget
-{ constructor( element, initially_selected_class, canvas_widget, options = {} )
-    { let rules = [ ".editor-widget { margin:auto; background:white; overflow:auto; font-family:monospace; width:1060px; padding:10px; \
-                                      border-radius:12px; box-shadow: 20px 20px 90px 0px powderblue inset, 5px 5px 30px 0px blue inset }",
-                    ".editor-widget button { background: #4C9F50; color: white; padding: 6px; border-radius:9px; margin-right:5px; \
-                                             box-shadow: 4px 6px 16px 0px rgba(0,0,0,0.3); transition: background .3s, transform .3s }",
-                    ".editor-widget input { margin-right:5px }",
-                    ".editor-widget textarea { white-space:pre; width:1040px; margin-bottom:30px }",
-                    ".editor-widget button:hover, button:focus { transform: scale(1.3); color:gold }"
-                  ];
-
-      for( const r of rules ) document.styleSheets[0].insertRule( r, 1 );
-
-      this.associated_canvas = canvas_widget;
-      this.options = options;
-
-      const form = this.form = element.appendChild( document.createElement( "form" ) );
-                                                          // Don't refresh the page on submit:
-      form.addEventListener( 'submit', event => 
-        { event.preventDefault(); this.submit_demo() }, false );    
-
-      const explanation = form.appendChild( document.createElement( "p" ) );
-      explanation.innerHTML = `<i><b>What can I put here?</b></i>  A JavaScript class, with any valid JavaScript inside.  Your code can use classes from this demo,
-                               <br>or from ANY demo on Demopedia --  the dependencies will automatically be pulled in to run your demo!<br>`;
-      
-      const run_button = this.run_button = form.appendChild( document.createElement( "button" ) );
-      run_button.type             = "button";
-      run_button.style            = "background:maroon";
-      run_button.textContent      = "Run with Changes";
-
-      const submit = this.submit = form.appendChild( document.createElement( "button" ) );
-      submit.type                 = "submit";
-      submit.textContent          = "Save as New Webpage";
-
-      const author_box = this.author_box = form.appendChild( document.createElement( "input" ) );
-      author_box.name             = "author";
-      author_box.type             = "text";
-      author_box.placeholder      = "Author name";
-      
-      const password_box = this.password_box = form.appendChild( document.createElement( "input" ) );
-      password_box.name           = "password";
-      password_box.type           = "text";
-      password_box.placeholder    = "Password";
-      password_box.style          = "display:none";
-
-      const overwrite_panel = this.overwrite_panel = form.appendChild( document.createElement( "span" ) );
-      overwrite_panel.style       = "display:none";
-      overwrite_panel.innerHTML   = "<label>Overwrite?<input type='checkbox' name='overwrite' autocomplete='off'></label>";
-
-      const submit_result = this.submit_result = form.appendChild( document.createElement( "div" ) );
-      submit_result.style         = "margin: 10px 0";
-
-      const new_demo_code = this.new_demo_code = form.appendChild( document.createElement( "textarea" ) );
-      new_demo_code.name    = "new_demo_code";
-      new_demo_code.rows    = this.options.rows || 25;
-      new_demo_code.cols    = 140;
-      if( initially_selected_class )
-        this.select_class( initially_selected_class );
-    }
-  select_class( class_definition )
-    { this.new_demo_code.value = class_definition.toString(); }
-  fetch_handler( url, body )          // A general utility function for sending / receiving JSON, with error handling.
-    { return fetch( url,
-      { body: body, method: body === undefined ? 'GET' : 'POST', 
-        headers: { 'content-type': 'application/json'  } 
-      }).then( response =>
-      { if ( response.ok )  return Promise.resolve( response.json() )
-        else                return Promise.reject ( response.status )
-      })
-    }
-  submit_demo()
-    { const form_fields = Array.from( this.form.elements ).reduce( ( accum, elem ) => 
-        { if( elem.value && !( ['checkbox', 'radio'].includes( elem.type ) && !elem.checked ) )
-            accum[ elem.name ] = elem.value; 
-          return accum;
-        }, {} );
-        
-      this.submit_result.innerHTML = "";
-      return this.fetch_handler( "/submit-demo?Unapproved", JSON.stringify( form_fields ) )
-        .then ( response => { if( response.show_password  ) this.password_box.style.display = "inline";
-                              if( response.show_overwrite ) this.overwrite_panel.style.display = "inline";
-                              this.submit_result.innerHTML += response.message + "<br>"; } )
-        .catch(    error => { this.submit_result.innerHTML += "Error " + error + " when trying to upload.<br>" } )
-    }
-}
-
-
-const Text_Widget = widgets.Text_Widget =
-class Text_Widget
-{                                                // **Text_Widget** generates HTML documentation and fills a panel with it.  This
-                                                 // documentation is extracted from whichever Scene object gets loaded first.
-  constructor( element, scenes, webgl_manager ) 
-    { const rules = [ ".text-widget { background: white; width:1060px;\
-                        padding:0 10px; overflow:auto; transition:1s; overflow-y:scroll; box-shadow: 10px 10px 90px 0 inset LightGray}",
-                      ".text-widget div { transition:none } "
-                    ];
-      if( document.styleSheets.length == 0 ) document.head.appendChild( document.createElement( "style" ) );
-      for( const r of rules ) document.styleSheets[document.styleSheets.length - 1].insertRule( r, 0 )
-
-      Object.assign( this, { element, scenes, webgl_manager } );
-      this.render();
-    }
-  render( time = 0 )
-    { if( this.scenes[0] )
-        this.scenes[0].show_explanation( this.element, this.webgl_manager )
       else
-        this.event = window.requestAnimFrame( this.render.bind( this ) )
+      { this.positions     .push( ...Vec.cast( [0,0,0], [1,0,0], [0,1,0],         // Method 2:  A tetrahedron with 
+                                               [0,0,0], [1,0,0], [0,0,1],         // four independent triangles.
+                                               [0,0,0], [0,1,0], [0,0,1],
+                                               [0,0,1], [1,0,0], [0,1,0] ) );
+
+        this.normals       .push( ...Vec.cast( [0,0,-1], [0,0,-1], [0,0,-1],        // This here makes Method 2 flat shaded, since values
+                                               [0,-1,0], [0,-1,0], [0,-1,0],        // of normal vectors can be constant per whole
+                                               [-1,0,0], [-1,0,0], [-1,0,0],        // triangle.  Repeat them for all three vertices.
+                                               [ a,a,a], [ a,a,a], [ a,a,a] ) );
+
+        this.texture_coords.push( ...Vec.cast( [0,0], [1,0], [1,1],      // Each face in Method 2 also gets its own set of texture coords
+                                               [0,0], [1,0], [1,1],      //(half the image is mapped onto each face).  We couldn't do this
+                                               [0,0], [1,0], [1,1],      // with shared vertices since this features abrupt transitions
+                                               [0,0], [1,0], [1,1] ) );  // when approaching the same point from different directions.
+
+        this.indices.push( 0, 1, 2,    3, 4, 5,    6, 7, 8,    9, 10, 11 );      // Notice all vertices are unique this time.
+      }
     }
 }
+
+
+window.Windmill = window.classes.Windmill =
+class Windmill extends Shape                     // Windmill Shape.  As our shapes get more complicated, we begin using matrices and flow
+{ constructor( num_blades )                      // control (including loops) to generate non-trivial point clouds and connect them.
+    { super( "positions", "normals", "texture_coords" );
+      for( var i = 0; i < num_blades; i++ )     // A loop to automatically generate the triangles.
+        {                                                                                   // Rotate around a few degrees in the
+          var spin = Mat4.rotation( i * 2*Math.PI/num_blades, Vec.of( 0,1,0 ) );            // XZ plane to place each new point.
+          var newPoint  = spin.times( Vec.of( 1,0,0,1 ) ).to3();   // Apply that XZ rotation matrix to point (1,0,0) of the base triangle.
+          this.positions.push( newPoint,                           // Store this XZ position.                  This is point 1.
+                               newPoint.plus( [ 0,1,0 ] ),         // Store it again but with higher y coord:  This is point 2.
+                                        Vec.of( 0,0,0 )    );      // All triangles touch this location.       This is point 3.
+
+                        // Rotate our base triangle's normal (0,0,1) to get the new one.  Careful!  Normal vectors are not points; 
+                        // their perpendicularity constraint gives them a mathematical quirk that when applying matrices you have
+                        // to apply the transposed inverse of that matrix instead.  But right now we've got a pure rotation matrix, 
+                        // where the inverse and transpose operations cancel out.
+          var newNormal = spin.times( Vec.of( 0,0,1 ).to4(0) ).to3();  
+          this.normals       .push( newNormal, newNormal, newNormal          );
+          this.texture_coords.push( ...Vec.cast( [ 0,0 ], [ 0,1 ], [ 1,0 ] ) );
+          this.indices       .push( 3*i, 3*i + 1, 3*i + 2                    ); // Procedurally connect the 3 new vertices into triangles.
+        }
+    }
+}
+
+
+window.Subdivision_Sphere = window.classes.Subdivision_Sphere =
+class Subdivision_Sphere extends Shape  // This Shape defines a Sphere surface, with nice uniform triangles.  A subdivision surface (see
+{                                       // Wikipedia article on those) is initially simple, then builds itself into a more and more 
+                                        // detailed shape of the same layout.  Each act of subdivision makes it a better approximation of 
+                                        // some desired mathematical surface by projecting each new point onto that surface's known 
+                                        // implicit equation.  For a sphere, we begin with a closed 3-simplex (a tetrahedron).  For each
+                                        // face, connect the midpoints of each edge together to make more faces.  Repeat recursively until 
+                                        // the desired level of detail is obtained.  Project all new vertices to unit vectors (onto the                                         
+  constructor( max_subdivisions )       // unit sphere) and group them into triangles by following the predictable pattern of the recursion.
+    { super( "positions", "normals", "texture_coords" );                      // Start from the following equilateral tetrahedron:
+      this.positions.push( ...Vec.cast( [ 0, 0, -1 ], [ 0, .9428, .3333 ], [ -.8165, -.4714, .3333 ], [ .8165, -.4714, .3333 ] ) );
+      
+      this.subdivideTriangle( 0, 1, 2, max_subdivisions);  // Begin recursion.
+      this.subdivideTriangle( 3, 2, 1, max_subdivisions);
+      this.subdivideTriangle( 1, 0, 3, max_subdivisions);
+      this.subdivideTriangle( 0, 2, 3, max_subdivisions); 
+      
+      for( let p of this.positions )
+        { this.normals.push( p.copy() );                 // Each point has a normal vector that simply goes to the point from the origin.
+
+                                                         // Textures are tricky.  A Subdivision sphere has no straight seams to which image 
+                                                         // edges in UV space can be mapped.  The only way to avoid artifacts is to smoothly                                                          
+          this.texture_coords.push(                      // wrap & unwrap the image in reverse - displaying the texture twice on the sphere.
+                                 Vec.of( Math.asin( p[0]/Math.PI ) + .5, Math.asin( p[1]/Math.PI ) + .5 ) ) }
+    }
+  subdivideTriangle( a, b, c, count )   // Recurse through each level of detail by splitting triangle (a,b,c) into four smaller ones.
+    { 
+      if( count <= 0) { this.indices.push(a,b,c); return; }  // Base case of recursion - we've hit the finest level of detail we want.
+                  
+      var ab_vert = this.positions[a].mix( this.positions[b], 0.5).normalized(),     // We're not at the base case.  So, build 3 new
+          ac_vert = this.positions[a].mix( this.positions[c], 0.5).normalized(),     // vertices at midpoints, and extrude them out to
+          bc_vert = this.positions[b].mix( this.positions[c], 0.5).normalized();     // touch the unit sphere (length 1).
+            
+      var ab = this.positions.push( ab_vert ) - 1,      // Here, push() returns the indices of the three new vertices (plus one).
+          ac = this.positions.push( ac_vert ) - 1,  
+          bc = this.positions.push( bc_vert ) - 1;  
+      
+      this.subdivideTriangle( a, ab, ac,  count - 1 );          // Recurse on four smaller triangles, and we're done.  Skipping every
+      this.subdivideTriangle( ab, b, bc,  count - 1 );          // fourth vertex index in our list takes you down one level of detail,
+      this.subdivideTriangle( ac, bc, c,  count - 1 );          // and so on, due to the way we're building it.
+      this.subdivideTriangle( ab, bc, ac, count - 1 );
+    }
+}
+
+
+window.Phong_Shader = window.classes.Phong_Shader =
+class Phong_Shader extends Shader          // THE DEFAULT SHADER: This uses the Phong Reflection Model, with optional Gouraud shading. 
+                                           // Wikipedia has good defintions for these concepts.  Subclasses of class Shader each store 
+                                           // and manage a complete GPU program.  This particular one is a big "master shader" meant to 
+                                           // handle all sorts of lighting situations in a configurable way. 
+                                           // Phong Shading is the act of determining brightness of pixels via vector math.  It compares
+                                           // the normal vector at that pixel to the vectors toward the camera and light sources.
+          // *** How Shaders Work:
+                                           // The "vertex_glsl_code" string below is code that is sent to the graphics card at runtime, 
+                                           // where on each run it gets compiled and linked there.  Thereafter, all of your calls to draw 
+                                           // shapes will launch the vertex shader program once per vertex in the shape (three times per 
+                                           // triangle), sending results on to the next phase.  The purpose of this vertex shader program 
+                                           // is to calculate the final resting place of vertices in screen coordinates; each vertex 
+                                           // starts out in local object coordinates and then undergoes a matrix transform to get there.
+                                           //
+                                           // Likewise, the "fragment_glsl_code" string is used as the Fragment Shader program, which gets 
+                                           // sent to the graphics card at runtime.  The fragment shader runs once all the vertices in a 
+                                           // triangle / element finish their vertex shader programs, and thus have finished finding out 
+                                           // where they land on the screen.  The fragment shader fills in (shades) every pixel (fragment) 
+                                           // overlapping where the triangle landed.  It retrieves different values (such as vectors) that 
+                                           // are stored at three extreme points of the triangle, and then interpolates the values weighted 
+                                           // by the pixel's proximity to each extreme point, using them in formulas to determine color.
+                                           // The fragment colors may or may not become final pixel colors; there could already be other 
+                                           // triangles' fragments occupying the same pixels.  The Z-Buffer test is applied to see if the 
+                                           // new triangle is closer to the camera, and even if so, blending settings may interpolate some 
+                                           // of the old color into the result.  Finally, an image is displayed onscreen.
+{ material( color, properties )     // Define an internal class "Material" that stores the standard settings found in Phong lighting.
+  { return new class Material       // Possible properties: ambient, diffusivity, specularity, smoothness, gouraud, texture.
+      { constructor( shader, color = Color.of( 0,0,0,1 ), ambient = 0, diffusivity = 1, specularity = 1, smoothness = 40 )
+          { Object.assign( this, { shader, color, ambient, diffusivity, specularity, smoothness } );  // Assign defaults.
+            Object.assign( this, properties );                                                        // Optionally override defaults.
+          }
+        override( properties )                      // Easily make temporary overridden versions of a base material, such as
+          { const copied = new this.constructor();  // of a different color or diffusivity.  Use "opacity" to override only that.
+            Object.assign( copied, this );
+            Object.assign( copied, properties );
+            copied.color = copied.color.copy();
+            if( properties[ "opacity" ] != undefined ) copied.color[3] = properties[ "opacity" ];
+            return copied;
+          }
+      }( this, color );
+  }
+  map_attribute_name_to_buffer_name( name )                  // We'll pull single entries out per vertex by field name.  Map
+    {                                                        // those names onto the vertex array names we'll pull them from.
+      return { object_space_pos: "positions", normal: "normals", tex_coord: "texture_coords" }[ name ]; }   // Use a simple lookup table.
+  shared_glsl_code()            // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
+    { return `precision mediump float;
+        const int N_LIGHTS = 2;             // We're limited to only so many inputs in hardware.  Lights are costly (lots of sub-values).
+        uniform float ambient, diffusivity, specularity, smoothness, animation_time, attenuation_factor[N_LIGHTS];
+        uniform bool GOURAUD, COLOR_NORMALS, USE_TEXTURE;               // Flags for alternate shading methods
+        uniform vec4 lightPosition[N_LIGHTS], lightColor[N_LIGHTS], shapeColor;
+        varying vec3 N, E;                    // Specifier "varying" means a variable's final value will be passed from the vertex shader 
+        varying vec2 f_tex_coord;             // on to the next phase (fragment shader), then interpolated per-fragment, weighted by the 
+        varying vec4 VERTEX_COLOR;            // pixel fragment's proximity to each of the 3 vertices (barycentric interpolation).
+        varying vec3 L[N_LIGHTS], H[N_LIGHTS];
+        varying float dist[N_LIGHTS];
+        
+        vec3 phong_model_lights( vec3 N )
+          { vec3 result = vec3(0.0);
+            for(int i = 0; i < N_LIGHTS; i++)
+              {
+                float attenuation_multiplier = 1.0 / (1.0 + attenuation_factor[i] * (dist[i] * dist[i]));
+                float diffuse  =      max( dot(N, L[i]), 0.0 );
+                float specular = pow( max( dot(N, H[i]), 0.0 ), smoothness );
+                result += attenuation_multiplier * ( shapeColor.xyz * diffusivity * diffuse + lightColor[i].xyz * specularity * specular );
+              }
+            return result;
+          }
+        `;
+    }
+  vertex_glsl_code()           // ********* VERTEX SHADER *********
+    { return `
+        attribute vec3 object_space_pos, normal;
+        attribute vec2 tex_coord;
+        uniform mat4 camera_transform, camera_model_transform, projection_camera_model_transform;
+        uniform mat3 inverse_transpose_modelview;
+        void main()
+        { gl_Position = projection_camera_model_transform * vec4(object_space_pos, 1.0);     // The vertex's final resting place (in NDCS).
+          N = normalize( inverse_transpose_modelview * normal );                             // The final normal vector in screen space.
+          f_tex_coord = tex_coord;                                         // Directly use original texture coords and interpolate between.
+          
+          if( COLOR_NORMALS )                                     // Bypass all lighting code if we're lighting up vertices some other way.
+          { VERTEX_COLOR = vec4( N[0] > 0.0 ? N[0] : sin( animation_time * 3.0   ) * -N[0],             // In "normals" mode, 
+                                 N[1] > 0.0 ? N[1] : sin( animation_time * 15.0  ) * -N[1],             // rgb color = xyz quantity.
+                                 N[2] > 0.0 ? N[2] : sin( animation_time * 45.0  ) * -N[2] , 1.0 );     // Flash if it's negative.
+            return;
+          }
+                                                  // The rest of this shader calculates some quantities that the Fragment shader will need:
+          vec3 screen_space_pos = ( camera_model_transform * vec4(object_space_pos, 1.0) ).xyz;
+          E = normalize( -screen_space_pos );
+          for( int i = 0; i < N_LIGHTS; i++ )
+          {            // Light positions use homogeneous coords.  Use w = 0 for a directional light source -- a vector instead of a point.
+            L[i] = normalize( ( camera_transform * lightPosition[i] ).xyz - lightPosition[i].w * screen_space_pos );
+            H[i] = normalize( L[i] + E );
+            
+            // Is it a point light source?  Calculate the distance to it from the object.  Otherwise use some arbitrary distance.
+            dist[i]  = lightPosition[i].w > 0.0 ? distance((camera_transform * lightPosition[i]).xyz, screen_space_pos)
+                                                : distance( attenuation_factor[i] * -lightPosition[i].xyz, object_space_pos.xyz );
+          }
+          if( GOURAUD )                   // Gouraud shading mode?  If so, finalize the whole color calculation here in the vertex shader, 
+          {                               // one per vertex, before we even break it down to pixels in the fragment shader.   As opposed 
+                                          // to Smooth "Phong" Shading, where we *do* wait to calculate final color until the next shader.
+            VERTEX_COLOR      = vec4( shapeColor.xyz * ambient, shapeColor.w);
+            VERTEX_COLOR.xyz += phong_model_lights( N );
+          }
+        }`;
+    }
+  fragment_glsl_code()           // ********* FRAGMENT SHADER ********* 
+    {                            // A fragment is a pixel that's overlapped by the current triangle.
+                                 // Fragments affect the final image or get discarded due to depth.
+      return `
+        uniform sampler2D texture;
+        void main()
+        { if( GOURAUD || COLOR_NORMALS )    // Do smooth "Phong" shading unless options like "Gouraud mode" are wanted instead.
+          { gl_FragColor = VERTEX_COLOR;    // Otherwise, we already have final colors to smear (interpolate) across vertices.            
+            return;
+          }                                 // If we get this far, calculate Smooth "Phong" Shading as opposed to Gouraud Shading.
+                                            // Phong shading is not to be confused with the Phong Reflection Model.
+          vec4 tex_color = texture2D( texture, f_tex_coord );                         // Sample the texture image in the correct place.
+                                                                                      // Compute an initial (ambient) color:
+          if( USE_TEXTURE ) gl_FragColor = vec4( ( tex_color.xyz + shapeColor.xyz ) * ambient, shapeColor.w * tex_color.w ); 
+          else gl_FragColor = vec4( shapeColor.xyz * ambient, shapeColor.w );
+          gl_FragColor.xyz += phong_model_lights( N );                     // Compute the final color with contributions from lights.
+        }`;
+    }
+    // Define how to synchronize our JavaScript's variables to the GPU's:
+  update_GPU( g_state, model_transform, material, gpu = this.g_addrs, gl = this.gl )
+    {                              // First, send the matrices to the GPU, additionally cache-ing some products of them we know we'll need:
+      this.update_matrices( g_state, model_transform, gpu, gl );
+      gl.uniform1f ( gpu.animation_time_loc, g_state.animation_time / 1000 );
+
+      if( g_state.gouraud === undefined ) { g_state.gouraud = g_state.color_normals = false; }    // Keep the flags seen by the shader 
+      gl.uniform1i( gpu.GOURAUD_loc,        g_state.gouraud || material.gouraud );                // program up-to-date and make sure 
+      gl.uniform1i( gpu.COLOR_NORMALS_loc,  g_state.color_normals );                              // they are declared.
+
+      gl.uniform4fv( gpu.shapeColor_loc,     material.color       );    // Send the desired shape-wide material qualities 
+      gl.uniform1f ( gpu.ambient_loc,        material.ambient     );    // to the graphics card, where they will tweak the
+      gl.uniform1f ( gpu.diffusivity_loc,    material.diffusivity );    // Phong lighting formula.
+      gl.uniform1f ( gpu.specularity_loc,    material.specularity );
+      gl.uniform1f ( gpu.smoothness_loc,     material.smoothness  );
+
+      if( material.texture )                           // NOTE: To signal not to draw a texture, omit the texture parameter from Materials.
+      { gpu.shader_attributes["tex_coord"].enabled = true;
+        gl.uniform1f ( gpu.USE_TEXTURE_loc, 1 );
+        gl.bindTexture( gl.TEXTURE_2D, material.texture.id );
+      }
+      else  { gl.uniform1f ( gpu.USE_TEXTURE_loc, 0 );   gpu.shader_attributes["tex_coord"].enabled = false; }
+
+      if( !g_state.lights.length )  return;
+      var lightPositions_flattened = [], lightColors_flattened = [], lightAttenuations_flattened = [];
+      for( var i = 0; i < 4 * g_state.lights.length; i++ )
+        { lightPositions_flattened                  .push( g_state.lights[ Math.floor(i/4) ].position[i%4] );
+          lightColors_flattened                     .push( g_state.lights[ Math.floor(i/4) ].color[i%4] );
+          lightAttenuations_flattened[ Math.floor(i/4) ] = g_state.lights[ Math.floor(i/4) ].attenuation;
+        }
+      gl.uniform4fv( gpu.lightPosition_loc,       lightPositions_flattened );
+      gl.uniform4fv( gpu.lightColor_loc,          lightColors_flattened );
+      gl.uniform1fv( gpu.attenuation_factor_loc,  lightAttenuations_flattened );
+    }
+  update_matrices( g_state, model_transform, gpu, gl )                                    // Helper function for sending matrices to GPU.
+    {                                                   // (PCM will mean Projection * Camera * Model)
+      let [ P, C, M ]    = [ g_state.projection_transform, g_state.camera_transform, model_transform ],
+            CM     =      C.times(  M ),
+            PCM    =      P.times( CM ),
+            inv_CM = Mat4.inverse( CM ).sub_block([0,0], [3,3]);
+                                                                  // Send the current matrices to the shader.  Go ahead and pre-compute
+                                                                  // the products we'll need of the of the three special matrices and just
+                                                                  // cache and send those.  They will be the same throughout this draw
+                                                                  // call, and thus across each instance of the vertex shader.
+                                                                  // Transpose them since the GPU expects matrices as column-major arrays.                                  
+      gl.uniformMatrix4fv( gpu.camera_transform_loc,                  false, Mat.flatten_2D_to_1D(     C .transposed() ) );
+      gl.uniformMatrix4fv( gpu.camera_model_transform_loc,            false, Mat.flatten_2D_to_1D(     CM.transposed() ) );
+      gl.uniformMatrix4fv( gpu.projection_camera_model_transform_loc, false, Mat.flatten_2D_to_1D(    PCM.transposed() ) );
+      gl.uniformMatrix3fv( gpu.inverse_transpose_modelview_loc,       false, Mat.flatten_2D_to_1D( inv_CM              ) );       
+    }
+}
+
+
+window.Movement_Controls = window.classes.Movement_Controls =
+class Movement_Controls extends Scene_Component    // Movement_Controls is a Scene_Component that can be attached to a canvas, like any 
+{                                                  // other Scene, but it is a Secondary Scene Component -- meant to stack alongside other
+                                                   // scenes.  Rather than drawing anything it embeds both first-person and third-person
+                                                   // style controls into the website.  These can be uesd to manually move your camera or
+                                                   // other objects smoothly through your scene using key, mouse, and HTML button controls
+                                                   // to help you explore what's in it.
+  constructor( context, control_box, canvas = context.canvas )
+    { super( context, control_box );
+      [ this.context, this.roll, this.look_around_locked, this.invert ] = [ context, 0, true, true ];                  // Data members
+      [ this.thrust, this.pos, this.z_axis ] = [ Vec.of( 0,0,0 ), Vec.of( 0,0,0 ), Vec.of( 0,0,0 ) ];
+                                                 // The camera matrix is not actually stored here inside Movement_Controls; instead, track
+                                                 // an external matrix to modify. This target is a reference (made with closures) kept
+                                                 // in "globals" so it can be seen and set by other classes.  Initially, the default target
+                                                 // is the camera matrix that Shaders use, stored in the global graphics_state object.
+      this.target = function() { return context.globals.movement_controls_target() }
+      context.globals.movement_controls_target = function(t) { return context.globals.graphics_state.camera_transform };
+      context.globals.movement_controls_invert = this.will_invert = () => true;
+      context.globals.has_controls = true;
+
+      [ this.radians_per_frame, this.meters_per_frame, this.speed_multiplier ] = [ 1/200, 20, 1 ];
+      
+      // *** Mouse controls: ***
+      this.mouse = { "from_center": Vec.of( 0,0 ) };                           // Measure mouse steering, for rotating the flyaround camera:
+      const mouse_position = ( e, rect = canvas.getBoundingClientRect() ) => 
+                                   Vec.of( e.clientX - (rect.left + rect.right)/2, e.clientY - (rect.bottom + rect.top)/2 );
+                                        // Set up mouse response.  The last one stops us from reacting if the mouse leaves the canvas.
+      document.addEventListener( "mouseup",   e => { this.mouse.anchor = undefined; } );
+      canvas  .addEventListener( "mousedown", e => { e.preventDefault(); this.mouse.anchor      = mouse_position(e); } );
+      canvas  .addEventListener( "mousemove", e => { e.preventDefault(); this.mouse.from_center = mouse_position(e); } );
+      canvas  .addEventListener( "mouseout",  e => { if( !this.mouse.anchor ) this.mouse.from_center.scale(0) } );  
+    }
+  show_explanation( document_element ) { }
+  make_control_panel()                                                        // This function of a scene sets up its keyboard shortcuts.
+    { const globals = this.globals;
+      this.control_panel.innerHTML += "Click and drag the scene to <br> spin your viewpoint around it.<br>";
+      this.key_triggered_button( "Up",     [ " " ], () => this.thrust[1] = -1, undefined, () => this.thrust[1] = 0 );
+      this.key_triggered_button( "Forward",[ "w" ], () => this.thrust[2] =  1, undefined, () => this.thrust[2] = 0 );  this.new_line();
+      this.key_triggered_button( "Left",   [ "a" ], () => this.thrust[0] =  1, undefined, () => this.thrust[0] = 0 );
+      this.key_triggered_button( "Back",   [ "s" ], () => this.thrust[2] = -1, undefined, () => this.thrust[2] = 0 );
+      this.key_triggered_button( "Right",  [ "d" ], () => this.thrust[0] = -1, undefined, () => this.thrust[0] = 0 );  this.new_line();
+      this.key_triggered_button( "Down",   [ "z" ], () => this.thrust[1] =  1, undefined, () => this.thrust[1] = 0 ); 
+
+      const speed_controls = this.control_panel.appendChild( document.createElement( "span" ) );
+      speed_controls.style.margin = "30px";
+      this.key_triggered_button( "-",  [ "o" ], () => this.speed_multiplier  /=  1.2, "green", undefined, undefined, speed_controls );
+      this.live_string( box => { box.textContent = "Speed: " + this.speed_multiplier.toFixed(2) }, speed_controls );
+      this.key_triggered_button( "+",  [ "p" ], () => this.speed_multiplier  *=  1.2, "green", undefined, undefined, speed_controls );
+      this.new_line();
+      this.key_triggered_button( "Roll left",  [ "," ], () => this.roll =  1, undefined, () => this.roll = 0 );
+      this.key_triggered_button( "Roll right", [ "." ], () => this.roll = -1, undefined, () => this.roll = 0 );  this.new_line();
+      this.key_triggered_button( "(Un)freeze mouse look around", [ "f" ], () => this.look_around_locked ^=  1, "green" );
+      this.new_line();
+      this.live_string( box => box.textContent = "Position: " + this.pos[0].toFixed(2) + ", " + this.pos[1].toFixed(2) 
+                                                       + ", " + this.pos[2].toFixed(2) );
+      this.new_line();        // The facing directions are actually affected by the left hand rule:
+      this.live_string( box => box.textContent = "Facing: " + ( ( this.z_axis[0] > 0 ? "West " : "East ")
+                   + ( this.z_axis[1] > 0 ? "Down " : "Up " ) + ( this.z_axis[2] > 0 ? "North" : "South" ) ) );
+      this.new_line();     
+      this.key_triggered_button( "Go to world origin", [ "r" ], () => this.target().set_identity( 4,4 ), "orange" );  this.new_line();
+      this.key_triggered_button( "Attach to global camera", [ "Shift", "R" ], () => 
+                                          globals.movement_controls_target = () => globals.graphics_state.camera_transform, "blue" );
+      this.new_line();
+    }
+  first_person_flyaround( radians_per_frame, meters_per_frame, leeway = 70 )
+    { const sign = this.will_invert ? 1 : -1;
+      const do_operation = this.target()[ this.will_invert ? "pre_multiply" : "post_multiply" ].bind( this.target() );
+                                                                      // Compare mouse's location to all four corners of a dead box.
+      const offsets_from_dead_box = { plus: [ this.mouse.from_center[0] + leeway, this.mouse.from_center[1] + leeway ],
+                                     minus: [ this.mouse.from_center[0] - leeway, this.mouse.from_center[1] - leeway ] }; 
+                // Apply a camera rotation movement, but only when the mouse is past a minimum distance (leeway) from the canvas's center:
+      if( !this.look_around_locked ) 
+        for( let i = 0; i < 2; i++ )      // Steer according to "mouse_from_center" vector, but don't 
+        {                                 // start increasing until outside a leeway window from the center.
+          let o = offsets_from_dead_box,                                          // The &&'s in the next line might zero the vectors out:
+            velocity = ( ( o.minus[i] > 0 && o.minus[i] ) || ( o.plus[i] < 0 && o.plus[i] ) ) * radians_per_frame;
+          do_operation( Mat4.rotation( sign * velocity, Vec.of( i, 1-i, 0 ) ) );   // On X step, rotate around Y axis, and vice versa.
+        }
+      if( this.roll != 0 ) do_operation( Mat4.rotation( sign * .1, Vec.of(0, 0, this.roll ) ) );
+                                                  // Now apply translation movement of the camera, in the newest local coordinate frame.
+      do_operation( Mat4.translation( this.thrust.times( sign * meters_per_frame ) ) );
+    }
+  third_person_arcball( radians_per_frame )
+    { const sign = this.will_invert ? 1 : -1;
+      const do_operation = this.target()[ this.will_invert ? "pre_multiply" : "post_multiply" ].bind( this.target() );
+      const dragging_vector = this.mouse.from_center.minus( this.mouse.anchor );               // Spin the scene around a point on an
+      if( dragging_vector.norm() <= 0 ) return;                                                // axis determined by user mouse drag.
+      do_operation( Mat4.translation([ 0,0, sign *  25 ]) );           // The presumed distance to the scene is a hard-coded 25 units.
+      do_operation( Mat4.rotation( radians_per_frame * dragging_vector.norm(), Vec.of( dragging_vector[1], dragging_vector[0], 0 ) ) );
+      do_operation( Mat4.translation([ 0,0, sign * -25 ]) );
+    }
+  display( graphics_state, dt = graphics_state.animation_delta_time / 1000 )    // Camera code starts here.
+    { const m = this.speed_multiplier * this. meters_per_frame,
+            r = this.speed_multiplier * this.radians_per_frame;
+      this.first_person_flyaround( dt * r, dt * m );     // Do first-person.  Scale the normal camera aiming speed by dt for smoothness.
+      if( this.mouse.anchor )                            // Also apply third-person "arcball" camera mode if a mouse drag is occurring.  
+        this.third_person_arcball( dt * r);           
+      
+      const inv = Mat4.inverse( this.target() );
+      this.pos = inv.times( Vec.of( 0,0,0,1 ) ); this.z_axis = inv.times( Vec.of( 0,0,1,0 ) );      // Log some values.
+    }
+}
+
+window.Grid_Patch = window.classes.Grid_Patch =
+class Grid_Patch extends Shape              // A grid of rows and columns you can distort. A tesselation of triangles connects the
+{                                           // points, generated with a certain predictable pattern of indices.  Two callbacks
+                                            // allow you to dynamically define how to reach the next row or column.
+  constructor( rows, columns, next_row_function, next_column_function, texture_coord_range = [ [ 0, rows ], [ 0, columns ] ]  )
+    { super( "positions", "normals", "texture_coords" );
+      let points = [];
+      for( let r = 0; r <= rows; r++ ) 
+      { points.push( new Array( columns+1 ) );                                                    // Allocate a 2D array.
+                                             // Use next_row_function to generate the start point of each row. Pass in the progress ratio,
+        points[ r ][ 0 ] = next_row_function( r/rows, points[ r-1 ] && points[ r-1 ][ 0 ] );      // and the previous point if it existed.                                                                                                  
+      }
+      for(   let r = 0; r <= rows;    r++ )               // From those, use next_column function to generate the remaining points:
+        for( let c = 0; c <= columns; c++ )
+        { if( c > 0 ) points[r][ c ] = next_column_function( c/columns, points[r][ c-1 ], r/rows );
+      
+          this.positions.push( points[r][ c ] );        
+                                                                                      // Interpolate texture coords from a provided range.
+          const a1 = c/columns, a2 = r/rows, x_range = texture_coord_range[0], y_range = texture_coord_range[1];
+          this.texture_coords.push( Vec.of( ( a1 )*x_range[1] + ( 1-a1 )*x_range[0], ( a2 )*y_range[1] + ( 1-a2 )*y_range[0] ) );
+        }
+      for(   let r = 0; r <= rows;    r++ )            // Generate normals by averaging the cross products of all defined neighbor pairs.
+        for( let c = 0; c <= columns; c++ )
+        { let curr = points[r][c], neighbors = new Array(4), normal = Vec.of( 0,0,0 );          
+          for( let [ i, dir ] of [ [ -1,0 ], [ 0,1 ], [ 1,0 ], [ 0,-1 ] ].entries() )         // Store each neighbor by rotational order.
+            neighbors[i] = points[ r + dir[1] ] && points[ r + dir[1] ][ c + dir[0] ];        // Leave "undefined" in the array wherever
+                                                                                              // we hit a boundary.
+          for( let i = 0; i < 4; i++ )                                          // Take cross-products of pairs of neighbors, proceeding
+            if( neighbors[i] && neighbors[ (i+1)%4 ] )                          // a consistent rotational direction through the pairs:
+              normal = normal.plus( neighbors[i].minus( curr ).cross( neighbors[ (i+1)%4 ].minus( curr ) ) );          
+          normal.normalize();                                                              // Normalize the sum to get the average vector.
+                                                     // Store the normal if it's valid (not NaN or zero length), otherwise use a default:
+          if( normal.every( x => x == x ) && normal.norm() > .01 )  this.normals.push( Vec.from( normal ) );    
+          else                                                      this.normals.push( Vec.of( 0,0,1 )    );
+        }   
+        
+      for( var h = 0; h < rows; h++ )             // Generate a sequence like this (if #columns is 10):  
+        for( var i = 0; i < 2 * columns; i++ )    // "1 11 0  11 1 12  2 12 1  12 2 13  3 13 2  13 3 14  4 14 3..." 
+          for( var j = 0; j < 3; j++ )
+            this.indices.push( h * ( columns + 1 ) + columns * ( ( i + ( j % 2 ) ) % 2 ) + ( ~~( ( j % 3 ) / 2 ) ? 
+                                   ( ~~( i / 2 ) + 2 * ( i % 2 ) )  :  ( ~~( i / 2 ) + 1 ) ) );
+    }
+  static sample_array( array, ratio )                 // Optional but sometimes useful as a next row or column operation. In a given array
+    {                                                 // of points, intepolate the pair of points that our progress ratio falls between.  
+      const frac = ratio * ( array.length - 1 ), alpha = frac - Math.floor( frac );
+      return array[ Math.floor( frac ) ].mix( array[ Math.ceil( frac ) ], alpha );
+    }
+}
+
+window.Surface_Of_Revolution = window.classes.Surface_Of_Revolution =
+class Surface_Of_Revolution extends Grid_Patch      // SURFACE OF REVOLUTION: Produce a curved "sheet" of triangles with rows and columns.
+                                                    // Begin with an input array of points, defining a 1D path curving through 3D space -- 
+                                                    // now let each such point be a row.  Sweep that whole curve around the Z axis in equal 
+                                                    // steps, stopping and storing new points along the way; let each step be a column. Now
+                                                    // we have a flexible "generalized cylinder" spanning an area until total_curvature_angle.
+{ constructor( rows, columns, points, texture_coord_range, total_curvature_angle = 2*Math.PI )
+    { const row_operation =     i => Grid_Patch.sample_array( points, i ),
+         column_operation = (j,p) => Mat4.rotation( total_curvature_angle/columns, Vec.of( 0,0,1 ) ).times(p.to4(1)).to3();
+         
+       super( rows, columns, row_operation, column_operation, texture_coord_range );
+    }
+}
+
+window.Torus = window.classes.Torus =
+class Torus extends Shape                                         // Build a donut shape.  An example of a surface of revolution.
+  { constructor( rows, columns )  
+      { super( "positions", "normals", "texture_coords" );
+        const circle_points = Array( rows ).fill( Vec.of( .75,0,0 ) )
+                                           .map( (p,i,a) => Mat4.translation([ -2,0,0 ])
+                                                    .times( Mat4.rotation( i/(a.length-1) * 2*Math.PI, Vec.of( 0,-1,0 ) ) )
+                                                    .times( p.to4(1) ).to3() );
+
+        Surface_Of_Revolution.insert_transformed_copy_into( this, [ rows, columns, circle_points ] );         
+      } }
