@@ -30,6 +30,32 @@ class Square extends Shape              // A square, demonstrating two triangles
     }
 }
 
+window.Cube = window.classes.Cube =
+    class Cube extends Shape {
+        // Here's a complete, working example of a Shape subclass.  It is a blueprint for a cube.
+        constructor() {
+            super("positions", "normals"); // Name the values we'll define per each vertex.  They'll have positions and normals.
+
+            // First, specify the vertex positions -- just a bunch of points that exist at the corners of an imaginary cube.
+            this.positions.push(...Vec.cast(
+                [-1, -1, -1], [1, -1, -1], [-1, -1, 1], [1, -1, 1], [1, 1, -1], [-1, 1, -1], [1, 1, 1], [-1, 1, 1],
+                [-1, -1, -1], [-1, -1, 1], [-1, 1, -1], [-1, 1, 1], [1, -1, 1], [1, -1, -1], [1, 1, 1], [1, 1, -1],
+                [-1, -1, 1], [1, -1, 1], [-1, 1, 1], [1, 1, 1], [1, -1, -1], [-1, -1, -1], [1, 1, -1], [-1, 1, -1]));
+            // Supply vectors that point away from eace face of the cube.  They should match up with the points in the above list
+            // Normal vectors are needed so the graphics engine can know if the shape is pointed at light or not, and color it accordingly.
+            this.normals.push(...Vec.cast(
+                [0, -1, 0], [0, -1, 0], [0, -1, 0], [0, -1, 0], [0, 1, 0], [0, 1, 0], [0, 1, 0], [0, 1, 0],
+                [-1, 0, 0], [-1, 0, 0], [-1, 0, 0], [-1, 0, 0], [1, 0, 0], [1, 0, 0], [1, 0, 0], [1, 0, 0],
+                [0, 0, 1], [0, 0, 1], [0, 0, 1], [0, 0, 1], [0, 0, -1], [0, 0, -1], [0, 0, -1], [0, 0, -1]));
+
+            // Those two lists, positions and normals, fully describe the "vertices".  What's the "i"th vertex?  Simply the combined
+            // data you get if you look up index "i" of both lists above -- a position and a normal vector, together.  Now let's
+            // tell it how to connect vertex entries into triangles.  Every three indices in this list makes one triangle:
+            this.indices.push(0, 1, 2, 1, 3, 2, 4, 5, 6, 5, 7, 6, 8, 9, 10, 9, 11, 10, 12, 13,
+                14, 13, 15, 14, 16, 17, 18, 17, 19, 18, 20, 21, 22, 21, 23, 22);
+            // It stinks to manage arrays this big.  Later we'll show code that generates these same cube vertices more automatically.
+        }
+    };
 
 window.Tetrahedron = window.classes.Tetrahedron =
 class Tetrahedron extends Shape                       // The Tetrahedron shape demonstrates flat vs smooth shading (a boolean argument 
@@ -490,3 +516,43 @@ class Torus extends Shape                                         // Build a don
 
         Surface_Of_Revolution.insert_transformed_copy_into( this, [ rows, columns, circle_points ] );         
       } }
+
+window.Text_Line = window.classes.Text_line =
+    class Text_Line extends Shape                       // Text_Line embeds text in the 3D world, using a crude texture method.  This
+    {                                                   // Shape is made of a horizontal arrangement of quads. Each is textured over with
+                                                        // images of ASCII characters, spelling out a string.  Usage:  Instantiate the
+                                                        // Shape with the desired character line width.  Assign it a single-line string
+                                                        // by calling set_string("your string") on it. Draw the shape on a material
+                                                        // with full ambient weight, and text.png assigned as its texture file.  For
+        constructor(max_size)                           // multi-line strings, repeat this process and draw with a different matrix.
+        {
+            super( "positions", "normals", "texture_coords" );
+            this.max_size = max_size;
+            var object_transform = Mat4.identity();
+            for (var i = 0; i < max_size; i++) {
+                Square.insert_transformed_copy_into(this, [], object_transform);   // Each quad is a separate Square instance.
+                object_transform.post_multiply(Mat4.translation([1.5, 0, 0]));
+            }
+        }
+
+        set_string(line, context)        // Overwrite the texture coordinates buffer with new values per quad,
+        {
+            this.texture_coords = [];           // which enclose each of the string's characters.
+            for (var i = 0; i < this.max_size; i++) {
+                var row = Math.floor((i < line.length ? line.charCodeAt(i) : ' '.charCodeAt()) / 16),
+                    col = Math.floor((i < line.length ? line.charCodeAt(i) : ' '.charCodeAt()) % 16);
+
+                var skip = 3, size = 32, sizefloor = size - skip;
+                var dim = size * 16, left = (col * size + skip) / dim, top = (row * size + skip) / dim,
+                    right = (col * size + sizefloor) / dim, bottom = (row * size + sizefloor + 5) / dim;
+
+                this.texture_coords.push(...Vec.cast( [left, 1 - bottom], [right, 1 - bottom], [left, 1 - top], [right, 1 - top] ));
+            }
+        if( !this.existing )
+            { this.copy_onto_graphics_card( context );
+              this.existing = true;
+            }
+        else
+            this.copy_onto_graphics_card( context, ["texture_coord"], false );
+        }
+    }
