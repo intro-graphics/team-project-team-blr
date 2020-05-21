@@ -5,7 +5,7 @@ class Basketball_Scene extends Scene_Component
         if( !context.globals.has_controls   ) 
           context.register_scene_component( new Movement_Controls( context, control_box.parentElement.insertCell() ) ); 
 
-        context.globals.graphics_state.camera_transform = Mat4.look_at( Vec.of( 17,10,0 ), Vec.of( 0,8,0 ), Vec.of( 0,1,0 ) );//Vec.of( 0,10,20 ), Vec.of( 0,0,0 ), Vec.of( 0,1,0 ) );
+        context.globals.graphics_state.camera_transform = Mat4.look_at( Vec.of( 20,10,0 ), Vec.of( 0,7,0 ), Vec.of( 0,1,0 ) );//Vec.of( 0,10,20 ), Vec.of( 0,0,0 ), Vec.of( 0,1,0 ) );
         this.initial_camera_location = Mat4.inverse( context.globals.graphics_state.camera_transform );
 
         const r = context.width/context.height;
@@ -27,7 +27,7 @@ class Basketball_Scene extends Scene_Component
                         ambient: 1,
                         diffusivity: 0,
                         specularity: 0,
-                        texture: context.get_instance("assets/ball.png", false) } ),
+                        texture: context.get_instance("assets/ball.png", true) } ),
 
             board:    context.get_instance( Phong_Shader ).material( Color.of( 0.15, 0.15, 0.15, 1 ), {
                         ambient: 1,
@@ -44,7 +44,7 @@ class Basketball_Scene extends Scene_Component
                         ambient: 1,
                         diffusivity: 0,
                         specularity: 0,
-                        texture: context.get_instance("assets/court.png", false) } ),
+                        texture: context.get_instance("assets/court.png", true) } ),
 
             wall:     context.get_instance( Phong_Shader ).material( Color.of( 0, 0, 0, 1 ), {
                         ambient: 1,
@@ -65,12 +65,7 @@ class Basketball_Scene extends Scene_Component
     make_control_panel()            // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
       { this.key_triggered_button( "View scene",  [ "0" ], () => this.attached = () => this.initial_camera_location );
         this.new_line();
-//         this.key_triggered_button( "Attach to planet 1", [ "1" ], () => this.attached = () => this.planet_1 );
-//         this.key_triggered_button( "Attach to planet 2", [ "2" ], () => this.attached = () => this.planet_2 ); this.new_line();
-//         this.key_triggered_button( "Attach to planet 3", [ "3" ], () => this.attached = () => this.planet_3 );
-//         this.key_triggered_button( "Attach to planet 4", [ "4" ], () => this.attached = () => this.planet_4 ); this.new_line();
-//         this.key_triggered_button( "Attach to planet 5", [ "5" ], () => this.attached = () => this.planet_5 );
-//         this.key_triggered_button( "Attach to moon",     [ "m" ], () => this.attached = () => this.moon     );
+
       }
 
     display( graphics_state )
