@@ -57,11 +57,37 @@ class Basketball_Scene extends Scene_Component
 
         this.lights = [ new Light( Vec.of( 5,-10,5,1 ), Color.of( 0, 1, 1, 1 ), 1000 ) ];
 
-        // Attributes for Basketball_Scene
-        this.score = 0;
+        /* ================================= ATTRIBUTES FOR BASKETBALL_SCENE ========================================= */
+   
+        this.mouseX = 0;
+        this.mouseY = 0;
+        var mainCanvas = document.getElementById("main-canvas");
+        mainCanvas.addEventListener("mousemove", this.mouse_tracker.bind(this));
+        mainCanvas.addEventListener("mousedown", this.cast_ray.bind(this));
 
+        
         this.ball_transform = Mat4.identity().
             times(Mat4.rotation( Math.PI/2, Vec.of(0,1,0) )).times(Mat4.translation( [0,1,-5] ));
+
+        /* =========================================================================================================== */
+      }
+
+    mouse_tracker(event)        // Mouse tracker for our canvas
+      {
+        var rect = document.getElementById("main-canvas").getBoundingClientRect();
+        this.mouseX = event.clientX - 548;
+        this.mouseY = -1 * (event.clientY - 308);
+        //console.log(this.mouseX, this.mouseY);
+      }
+
+    intersectSphere()         // Check if the ray intersects a sphere 
+     {
+
+     }
+
+    cast_ray(xp = this.mouseX, yp = this.mouseY)       
+      {
+        console.log(xp, yp);
 
       }
 
@@ -83,7 +109,7 @@ class Basketball_Scene extends Scene_Component
         scoreboard_transform = scoreboard_transform.times(Mat4.rotation( Math.PI/2, Vec.of(0,1,0)));
         scoreboard_transform = scoreboard_transform.times(Mat4.translation( [-15,19,-35] ));
         scoreboard_transform = scoreboard_transform.times(Mat4.scale( [8,4,.25] ));
-        this.shapes.cube.draw( graphics_state, scoreboard_transform, this.materials.board)
+        this.shapes.cube.draw( graphics_state, scoreboard_transform, this.materials.board);
 
         // Draw the ground 
         let ground_transform = Mat4.identity();
