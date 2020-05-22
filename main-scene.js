@@ -3,7 +3,7 @@ class Basketball_Scene extends Scene_Component
   { constructor( context, control_box )     // The scene begins by requesting the camera, shapes, and materials it will need.
       { super(   context, control_box );    // First, include a secondary Scene that provides movement controls:
         if( !context.globals.has_controls   ) 
-          context.register_scene_component( new Movement_Controls( context, control_box.parentElement.insertCell() ) ); 
+          //context.register_scene_component( new Movement_Controls( context, control_box.parentElement.insertCell() ) ); 
 
         context.globals.graphics_state.camera_transform = Mat4.look_at( Vec.of( 20,10,0 ), Vec.of( 0,7,0 ), Vec.of( 0,1,0 ) );//Vec.of( 0,10,20 ), Vec.of( 0,0,0 ), Vec.of( 0,1,0 ) );
         this.initial_camera_location = Mat4.inverse( context.globals.graphics_state.camera_transform );
@@ -60,7 +60,19 @@ class Basketball_Scene extends Scene_Component
         // Attributes for Basketball_Scene
         this.score = 0;
 
+        //Mouse stuff
+        var mainCanvas = document.getElementById('main-canvas');
+        mainCanvas.addEventListener("mousemove", this.track.bind(this));
+        this.mouseX = 0;
+        this.mouseY = 0;
+
       }
+
+    track(event) {
+          this.mouseX = (event.clientX-548)/100;
+          this.mouseY = ((event.clientY - 308) * -1)/100;
+          //console.log("X: " + this.mouseX + "\n" + "Y: " + this.mouseY + "\n")
+    }
 
     make_control_panel()            // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
       { this.key_triggered_button( "View scene",  [ "0" ], () => this.attached = () => this.initial_camera_location );
@@ -75,7 +87,7 @@ class Basketball_Scene extends Scene_Component
         // Draw the static basketball - NEEDS MODIFICATION FOR MOUSE PICKING
         let ball_transform = Mat4.identity();
         ball_transform = ball_transform.times(Mat4.rotation( Math.PI/2, Vec.of(0,1,0) ));
-        ball_transform = ball_transform.times(Mat4.translation( [0,1,-5] ));
+        ball_transform = ball_transform.times(Mat4.translation( [0+this.mouseX,1+this.mouseY,-5] ));
         this.shapes.sphere4.draw( graphics_state, ball_transform, this.materials.ball );
 
         // Draw the scoreboard 
