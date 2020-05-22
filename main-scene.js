@@ -19,7 +19,7 @@ class Basketball_Scene extends Scene_Component
 
         this.submit_shapes( context, shapes );
                                      
-                                     // Make some Material objects available to you:
+        // Make some Material objects available to you:
         this.materials =
           { test:     context.get_instance( Phong_Shader ).material( Color.of( 1, 1, 0, 1 ), { ambient:.2 } ),
 
@@ -47,10 +47,10 @@ class Basketball_Scene extends Scene_Component
                         texture: context.get_instance("assets/court.png", true) } ),
 
             wall:     context.get_instance( Phong_Shader ).material( Color.of( 0, 0, 0, 1 ), {
-                        ambient: 1,
+                        ambient: 0.9,
                         diffusivity: 0,
                         specularity: 0,
-                        texture: context.get_instance("assets/walls.png", false),
+                        texture: context.get_instance("assets/walls.png", true),
             }),
     
           }
@@ -59,6 +59,9 @@ class Basketball_Scene extends Scene_Component
 
         // Attributes for Basketball_Scene
         this.score = 0;
+
+        this.ball_transform = Mat4.identity().
+            times(Mat4.rotation( Math.PI/2, Vec.of(0,1,0) )).times(Mat4.translation( [0,1,-5] ));
 
       }
 
@@ -72,13 +75,10 @@ class Basketball_Scene extends Scene_Component
       { graphics_state.lights = this.lights;        // Use the lights stored in this.lights.
         const t = graphics_state.animation_time / 1000, dt = graphics_state.animation_delta_time / 1000;
 
-        // Draw the static basketball - NEEDS MODIFICATION FOR MOUSE PICKING
-        let ball_transform = Mat4.identity();
-        ball_transform = ball_transform.times(Mat4.rotation( Math.PI/2, Vec.of(0,1,0) ));
-        ball_transform = ball_transform.times(Mat4.translation( [0,1,-5] ));
-        this.shapes.sphere4.draw( graphics_state, ball_transform, this.materials.ball );
+        // Draw the basketball - NEEDS MODIFICATION FOR MOUSE PICKING
+        this.shapes.sphere4.draw( graphics_state, this.ball_transform, this.materials.ball );
 
-        // Draw the scoreboard 
+        // Draw the scoreboard
         let scoreboard_transform = Mat4.identity();
         scoreboard_transform = scoreboard_transform.times(Mat4.rotation( Math.PI/2, Vec.of(0,1,0)));
         scoreboard_transform = scoreboard_transform.times(Mat4.translation( [-15,19,-35] ));
