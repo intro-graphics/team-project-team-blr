@@ -5,7 +5,7 @@ class Basketball_Scene extends Scene_Component
         if( !context.globals.has_controls   ) 
           context.register_scene_component( new Movement_Controls( context, control_box.parentElement.insertCell() ) ); 
 
-        context.globals.graphics_state.camera_transform = Mat4.look_at( Vec.of( 20,10,0 ), Vec.of( 0,7,0 ), Vec.of( 0,1,0 ) );//Vec.of( 0,10,20 ), Vec.of( 0,0,0 ), Vec.of( 0,1,0 ) );
+        context.globals.graphics_state.camera_transform = Mat4.look_at( Vec.of( 0,10,18 ), Vec.of( 0,5,-20 ), Vec.of( 0,1,0 ) );
         this.initial_camera_location = Mat4.inverse( context.globals.graphics_state.camera_transform );
 
         const r = context.width/context.height;
@@ -52,7 +52,6 @@ class Basketball_Scene extends Scene_Component
                         specularity: 0,
                         texture: context.get_instance("assets/walls.png", true),
             }),
-    
           }
 
         this.lights = [ new Light( Vec.of( 5,-10,5,1 ), Color.of( 0, 1, 1, 1 ), 1000 ) ];
@@ -61,13 +60,10 @@ class Basketball_Scene extends Scene_Component
    
         this.mouseX = 0;
         this.mouseY = 0;
-        var mainCanvas = document.getElementById("main-canvas");
-        mainCanvas.addEventListener("mousemove", this.mouse_tracker.bind(this));
-        mainCanvas.addEventListener("mousedown", this.cast_ray.bind(this));
+        context.canvas.addEventListener("mousemove", this.mouse_tracker.bind(this));
+        context.canvas.addEventListener("mousedown", this.cast_ray.bind(this));
 
-        
-        this.ball_transform = Mat4.identity().
-            times(Mat4.rotation( Math.PI/2, Vec.of(0,1,0) )).times(Mat4.translation( [0,1,-5] ));
+        this.ball_transform = Mat4.identity().times(Mat4.translation( [0,1,-5] ));
 
         /* =========================================================================================================== */
       }
@@ -75,20 +71,29 @@ class Basketball_Scene extends Scene_Component
     mouse_tracker(event)        // Mouse tracker for our canvas
       {
         var rect = document.getElementById("main-canvas").getBoundingClientRect();
-        this.mouseX = event.clientX - 548;
-        this.mouseY = -1 * (event.clientY - 308);
+        this.mouseX = event.clientX - (rect.left + rect.right)/2;
+        this.mouseY = -1 * (event.clientY - (rect.bottom + rect.top - 379)/2);
         //console.log(this.mouseX, this.mouseY);
       }
 
     intersectSphere()         // Check if the ray intersects a sphere 
-     {
+     { 
 
      }
 
-    cast_ray(xp = this.mouseX, yp = this.mouseY)       
+    cast_ray()       
       {
-        console.log(xp, yp);
+        if (this.mouseX >= -540 && this.mouseX <= 540 && this.mouseY >= -300 && this.mouseY <= 300)     // Only perform ray cast if we clicked on the scene
+          {  
+            console.log(this.mouseX, this.mouseY); 
+//             let norm_x = this.mouseX / 540.;    // Convert to WebGL coordinates x,y:[-1,1]
+//             let norm_y = this.mouseY / 300.;
 
+//             let ray_proj = Vec.of(norm_x, norm_y, -1, 1);
+//             let ray_eye = Mat4.inverse(Mat4.perspective( Math.PI/4, 1080/600, .1, 1000 )) * ray_proj;
+//             console.log(ray_eye);
+          }
+        
       }
 
     make_control_panel()            // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
@@ -106,27 +111,30 @@ class Basketball_Scene extends Scene_Component
 
         // Draw the scoreboard
         let scoreboard_transform = Mat4.identity();
-        scoreboard_transform = scoreboard_transform.times(Mat4.rotation( Math.PI/2, Vec.of(0,1,0)));
-        scoreboard_transform = scoreboard_transform.times(Mat4.translation( [-15,19,-35] ));
-        scoreboard_transform = scoreboard_transform.times(Mat4.scale( [8,4,.25] ));
+        scoreboard_transform = scoreboard_transform.times(Mat4.translation( [-17,20,-35] ));
+        scoreboard_transform = scoreboard_transform.times(Mat4.scale( [7,4,.25] ));
         this.shapes.cube.draw( graphics_state, scoreboard_transform, this.materials.board);
 
         // Draw the ground 
         let ground_transform = Mat4.identity();
+        ground_transform = ground_transform.times(Mat4.rotation( Math.PI/2, Vec.of(0,1,0) ));
         ground_transform = ground_transform.times(Mat4.rotation( Math.PI/2, Vec.of(1,0,0) ));
         ground_transform = ground_transform.times(Mat4.scale( [35,25,1] ));
         this.shapes.square.draw( graphics_state, ground_transform, this.materials.ground);
 
         // Draw the walls 
         let wall_transform = Mat4.identity();
+        wall_transform = wall_transform.times(Mat4.rotation( Math.PI/2, Vec.of(0,1,0) ));
         wall_transform = wall_transform.times(Mat4.translation( [0,15,25] ));
         wall_transform = wall_transform.times(Mat4.scale( [35,15,0] ));
         this.shapes.square.draw( graphics_state, wall_transform, this.materials.wall);  // Left wall
         wall_transform = Mat4.identity();
+        wall_transform = wall_transform.times(Mat4.rotation( Math.PI/2, Vec.of(0,1,0) ));
         wall_transform = wall_transform.times(Mat4.translation( [0,15,-25] ));
         wall_transform = wall_transform.times(Mat4.scale( [35,15,0 ] ));
         this.shapes.square.draw( graphics_state, wall_transform, this.materials.wall);  // Right wall
         wall_transform = Mat4.identity();
+        wall_transform = wall_transform.times(Mat4.rotation( -Math.PI/2, Vec.of(0,1,0) ));
         wall_transform = wall_transform.times(Mat4.rotation( Math.PI/2, Vec.of(0,1,0)));
         wall_transform = wall_transform.times(Mat4.translation( [0,15,-35] ));
         wall_transform = wall_transform.times(Mat4.scale( [25,15,0]));
