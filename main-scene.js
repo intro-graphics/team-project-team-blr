@@ -28,7 +28,9 @@ import { Text_Demo }
   from "./examples/text-demo.js"
 import { Transforms_Sandbox }
   from "./examples/transforms-sandbox.js"
-
+// import { Basketball }
+//   from "./examples/basketball.js"
+  
 Object.assign( defs,
                      { Axes_Viewer, Axes_Viewer_Test_Scene },
                      { Inertia_Demo, Collision_Demo },
