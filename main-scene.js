@@ -3,7 +3,7 @@ class Basketball_Scene extends Scene_Component
   { constructor( context, control_box )     // The scene begins by requesting the camera, shapes, and materials it will need.
       { super(   context, control_box );    // First, include a secondary Scene that provides movement controls:
         if( !context.globals.has_controls   ) 
-          context.register_scene_component( new Movement_Controls( context, control_box.parentElement.insertCell() ) ); 
+          //context.register_scene_component( new Movement_Controls( context, control_box.parentElement.insertCell() ) ); 
 
         context.globals.graphics_state.camera_transform = Mat4.look_at( Vec.of( 20,10,0 ), Vec.of( 0,7,0 ), Vec.of( 0,1,0 ) );//Vec.of( 0,10,20 ), Vec.of( 0,0,0 ), Vec.of( 0,1,0 ) );
         this.initial_camera_location = Mat4.inverse( context.globals.graphics_state.camera_transform );
@@ -63,15 +63,27 @@ class Basketball_Scene extends Scene_Component
         //Mouse stuff
         var mainCanvas = document.getElementById('main-canvas');
         mainCanvas.addEventListener("mousemove", this.track.bind(this));
+        mainCanvas.addEventListener("mousedown", this.click.bind(this));
+        mainCanvas.addEventListener("mouseup", this.unclick.bind(this));
         this.mouseX = 0;
         this.mouseY = 0;
-
+        this.mouseDown = false;
       }
+     
+    click(event) {
+        this.mouseDown = true;
+    }
+
+    unclick(event) {
+        this.mouseDown = false;
+    }
 
     track(event) {
-          this.mouseX = (event.clientX-((1087+5)/2))/30;
-          this.mouseY = (459-event.clientY)/29;
-          //console.log("X: " + this.mouseX + "\n" + "Y: " + this.mouseY + "\n")
+        if (this.mouseDown) {
+            this.mouseX = (event.clientX-((1087+5)/2))/30;
+            this.mouseY = (459-event.clientY)/29;
+        }
+        //console.log("X: " + this.mouseX + "\n" + "Y: " + this.mouseY + "\n")
     }
 
     make_control_panel()            // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
