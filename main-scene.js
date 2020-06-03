@@ -3,7 +3,7 @@ class Basketball_Scene extends Scene_Component
   { constructor( context, control_box )     // The scene begins by requesting the camera, shapes, and materials it will need.
       { super(   context, control_box );    // First, include a secondary Scene that provides movement controls:
         if( !context.globals.has_controls   ) 
-          //context.register_scene_component( new Movement_Controls( context, control_box.parentElement.insertCell() ) ); 
+          context.register_scene_component( new Movement_Controls( context, control_box.parentElement.insertCell() ) ); 
 
         context.globals.graphics_state.camera_transform = Mat4.look_at( Vec.of( 20,10,0 ), Vec.of( 0,7,0 ), Vec.of( 0,1,0 ) );//Vec.of( 0,10,20 ), Vec.of( 0,0,0 ), Vec.of( 0,1,0 ) );
         this.initial_camera_location = Mat4.inverse( context.globals.graphics_state.camera_transform );
@@ -69,8 +69,8 @@ class Basketball_Scene extends Scene_Component
       }
 
     track(event) {
-          this.mouseX = (event.clientX-548)/100;
-          this.mouseY = ((event.clientY - 308) * -1)/100;
+          this.mouseX = (event.clientX-((1087+5)/2))/30;
+          this.mouseY = (459-event.clientY)/29;
           //console.log("X: " + this.mouseX + "\n" + "Y: " + this.mouseY + "\n")
     }
 
