@@ -7,7 +7,7 @@ class Basketball_Scene extends Scene_Component
 
         context.globals.graphics_state.camera_transform = Mat4.look_at( Vec.of( 20,10,0 ), Vec.of( 0,7,0 ), Vec.of( 0,1,0 ) );//Vec.of( 0,10,20 ), Vec.of( 0,0,0 ), Vec.of( 0,1,0 ) );
         this.initial_camera_location = Mat4.inverse( context.globals.graphics_state.camera_transform );
-
+        
         const r = context.width/context.height;
         context.globals.graphics_state.projection_transform = Mat4.perspective( Math.PI/4, r, .1, 1000 );
 
@@ -59,20 +59,22 @@ class Basketball_Scene extends Scene_Component
 
         /* ================================= ATTRIBUTES FOR BASKETBALL_SCENE ========================================= */
    
+        this.projection_transform = context.globals.graphics_state.projection_transform;
+        this.camera_transform = context.globals.graphics_state.camera_transform;
         this.mouseX = 0;
         this.mouseY = 0;
         var mainCanvas = document.getElementById("main-canvas");
         mainCanvas.addEventListener("mousemove", this.mouse_tracker.bind(this));
         mainCanvas.addEventListener("mousedown", this.cast_ray.bind(this));
 
-        
-        this.ball_transform = Mat4.identity().
-            times(Mat4.rotation( Math.PI/2, Vec.of(0,1,0) )).times(Mat4.translation( [0,1,-5] ));
+        this.ball_transform = Mat4.identity().times(Mat4.translation( [0,1,-5] ));
+        this.ball_rad = 1;
+
 
         /* =========================================================================================================== */
       }
 
-    mouse_tracker(event)        // Mouse tracker for our canvas
+    mouse_tracker( event )        // Mouse tracker for our canvas
       {
         var rect = document.getElementById("main-canvas").getBoundingClientRect();
         this.mouseX = event.clientX - 548;
@@ -80,15 +82,25 @@ class Basketball_Scene extends Scene_Component
         //console.log(this.mouseX, this.mouseY);
       }
 
-    intersectSphere()         // Check if the ray intersects a sphere 
-     {
-
-     }
-
-    cast_ray(xp = this.mouseX, yp = this.mouseY)       
+    cast_ray()       
       {
-        console.log(xp, yp);
+        if (this.mouseX >= -540 && this.mouseX <= 540 && this.mouseY >= -300 && this.mouseY <= 300)     // Only perform ray cast if we clicked on the scene
+          {  
+            //console.log(this.mouseX, this.mouseY); 
+            var norm_x = this.mouseX / 540.;    // Convert to normalized device coordinates x,y: [-1,1]
+            var norm_y = this.mouseY / 300.;
 
+            var ray_clip = Vec.of(norm_x, norm_y, -1.0, 1.0);   
+            var ray_eye = Mat4.inverse( this.projection_transform ).times(ray_clip);    // Convert to eye space
+            ray_eye = ray_eye.plus( Vec.of(0,0,0,-10.) );
+            //console.log(ray_eye);
+            var ray_world = this.initial_camera_location.times(ray_eye);        // Convert to world space
+            ray_world = ray_world.to3().normalized();
+            console.log(ray_world);
+
+            // Check for intersection between ray and the basketball
+            //var ray2center = 
+          }
       }
 
     make_control_panel()            // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
