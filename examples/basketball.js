@@ -202,11 +202,11 @@ export class Basketball_Game extends Scene
       {
         if (this.mouseDown) 
         {
-            this.mouseX = event.clientX - 548;//(canvas.right - canvas.left)/2;
-            this.mouseY = -1 * (event.clientY - 308);//(canvas.bottom - canvas.top)/2);
-            //this.mouseX = (event.clientX - ((1087+5)/2))/30;
-            //this.mouseY = (459-event.clientY)/29;
-            console.log("X: " + this.mouseX + "\n" + "Y: " + this.mouseY + "\n")
+//             this.mouseX = event.clientX - 548;//(canvas.right - canvas.left)/2;
+//             this.mouseY = -1 * (event.clientY - 308);//(canvas.bottom - canvas.top)/2);
+            this.mouseX = (event.clientX - ((1270+191)/2))/34;
+            this.mouseY = (496-event.clientY)/33;
+            //console.log("X: " + event.clientX + "\n" + "Y: " + event.clientY + "\n")
         }
       }
 //     mouse_tracker( event )        // Mouse tracker for our canvas
@@ -266,7 +266,7 @@ export class Basketball_Game extends Scene
         const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
 
         // Draw the basketball
-        let ball_transform = Mat4.translation(0,1,-5);//Mat4.translation( 0 + this.mouseX, 1 + this.mouseY, -5 );
+        let ball_transform = Mat4.translation( 0 + this.mouseX, 1 + this.mouseY, -5 );
         this.shapes.sphere4.draw( context, program_state, ball_transform, this.materials.ball );
 
         // Draw the basketball hoop
