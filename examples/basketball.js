@@ -138,11 +138,13 @@ export class Basketball_Game extends Simulation
         if ( this.mouseY >= 0 ) 
         {
           let ball_transform = Mat4.translation(1 + this.mouseX, 1 + this.mouseY, -5);
+          //new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( ball_transform, vec3( 0,0,0 ), vec3( 0,0,0 ) );
           this.shapes.sphere4.draw( context, program_state, ball_transform, this.materials.ball );
         }
         else    // Cannot drag the ball below the floor
         {
           let ball_transform = Mat4.translation(1 + this.mouseX, 1, -5);
+          //new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( ball_transform, vec3( 0,0,0 ), vec3( 0,0,0 ) );
           this.shapes.sphere4.draw( context, program_state, ball_transform, this.materials.ball );
         }
         //new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( ball_transform, vec3( 0,0,0 ), vec3( 0,0,0 ) );
