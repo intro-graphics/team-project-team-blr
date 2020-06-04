@@ -101,6 +101,7 @@ class Basketball_Scene extends Scene_Component
         ball_transform = ball_transform.times(Mat4.rotation( Math.PI/2, Vec.of(0,1,0) ));
         ball_transform = ball_transform.times(Mat4.translation( [0+this.mouseX,1+this.mouseY,-5] ));
         this.shapes.sphere4.draw( graphics_state, ball_transform, this.materials.ball );
+        //new Body( this.shapes.sphere4, this.materials.ball, Vec.of( 1,1,1 ) ).emplace(ball_transform, Vec.of(0,0,0), Vec.of(0,0,0))
 
         // Draw the scoreboard 
         let scoreboard_transform = Mat4.identity();
