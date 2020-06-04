@@ -69,6 +69,8 @@ export class Basketball_Game extends Simulation
 //         this.mouseY = 0;
 //         this.mouseDown = false;
 
+           
+
         /* =========================================================================================================== */
       }
 
@@ -113,6 +115,14 @@ export class Basketball_Game extends Simulation
         //super.make_control_panel();
 
       }
+    update_state( dt )
+      {               // update_state():  Override the base time-stepping code to say what this particular
+                      // scene should do to its bodies every frame -- including applying forces.
+                      // Generate additional moving bodies if there ever aren't enough:
+        this.bodies.push( new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( ...vec3(0,1,-5), vec3( 0,0,0 ), vec3( 0,0,0 ) ));
+    
+      }
+
 
     display( context, program_state )
       { //super.display( context, program_state )
@@ -137,15 +147,17 @@ export class Basketball_Game extends Simulation
         // Draw the basketball
         if ( this.mouseY >= 0 ) 
         {
-          let ball_transform = Mat4.translation(1 + this.mouseX, 1 + this.mouseY, -5);
-          //new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( ball_transform, vec3( 0,0,0 ), vec3( 0,0,0 ) );
-          this.shapes.sphere4.draw( context, program_state, ball_transform, this.materials.ball );
+          //let ball_transform = Mat4.translation(1 + this.mouseX, 1 + this.mouseY, -5);
+          let ball_transform = Mat4.translation(1, 1, -5);
+          //this.bodies.push( new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( ball_transform, vec3( 0,0,0 ), vec3( 0,0,0 ) ));
+          //this.shapes.sphere4.draw( context, program_state, ball_transform, this.materials.ball );
         }
         else    // Cannot drag the ball below the floor
         {
-          let ball_transform = Mat4.translation(1 + this.mouseX, 1, -5);
-          //new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( ball_transform, vec3( 0,0,0 ), vec3( 0,0,0 ) );
-          this.shapes.sphere4.draw( context, program_state, ball_transform, this.materials.ball );
+          //let ball_transform = Mat4.translation(1 + this.mouseX, 1, -5);
+          let ball_transform = Mat4.translation(1, 1, -5);
+          //this.bodies.push( new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( ball_transform, vec3( 0,0,0 ), vec3( 0,0,0 ) ));
+          //this.shapes.sphere4.draw( context, program_state, ball_transform, this.materials.ball );
         }
         //new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( ball_transform, vec3( 0,0,0 ), vec3( 0,0,0 ) );
 
