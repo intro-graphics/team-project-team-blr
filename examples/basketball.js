@@ -78,7 +78,7 @@ export class Basketball_Game extends Simulation
     {                                       // add_mouse_controls():  Attach HTML mouse events to the drawing canvas.
                                             // First, measure mouse steering, for rotating the flyaround camera:
       this.mouse = { "from_center": vec( 0,0 ) };
-      const mouse_position = ( e, rect = canvas.getBoundingClientRect() ) => 
+      this.mouse_position = ( e, rect = canvas.getBoundingClientRect() ) => 
                                    vec( e.clientX - (rect.left + rect.right)/2, e.clientY - (rect.bottom + rect.top)/2 );
       //console.log(canvas.getBoundingClientRect());
                                 // Set up mouse response.  The last one stops us from reacting if the mouse leaves the canvas:
@@ -101,8 +101,11 @@ export class Basketball_Game extends Simulation
       {
         if (this.mouseDown) 
         {
-            this.mouseX = (event.clientX - ((1270+191)/2))/34;
-            this.mouseY = (496-event.clientY)/33;
+//             this.mouseX = event.clientX - 548;//(canvas.right - canvas.left)/2;
+//             this.mouseY = -1 * (event.clientY - 308);//(canvas.bottom - canvas.top)/2);
+            this.mouseX = (this.mouse_position(event)[0])/34;
+            this.mouseY = (183-this.mouse_position(event)[1])/33;
+            console.log(this.mouse_position(event));
             //console.log("X: " + event.clientX + "\n" + "Y: " + event.clientY + "\n")
             console.log("X: " + this.mouseX + "\n" + "Y: " + this.mouseY + "\n")
         }
@@ -148,14 +151,14 @@ export class Basketball_Game extends Simulation
         if ( this.mouseY >= 0 ) 
         {
           //let ball_transform = Mat4.translation(1 + this.mouseX, 1 + this.mouseY, -5);
-          let ball_transform = Mat4.translation(1, 1, -5);
+          let ball_transform = Mat4.translation(0 + this.mouseX, 1 + this.mouseY, -5);
           //this.bodies.push( new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( ball_transform, vec3( 0,0,0 ), vec3( 0,0,0 ) ));
           //this.shapes.sphere4.draw( context, program_state, ball_transform, this.materials.ball );
         }
         else    // Cannot drag the ball below the floor
         {
           //let ball_transform = Mat4.translation(1 + this.mouseX, 1, -5);
-          let ball_transform = Mat4.translation(1, 1, -5);
+          let ball_transform = Mat4.translation(0 + this.mouseX, 1, -5);
           //this.bodies.push( new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( ball_transform, vec3( 0,0,0 ), vec3( 0,0,0 ) ));
           //this.shapes.sphere4.draw( context, program_state, ball_transform, this.materials.ball );
         }
