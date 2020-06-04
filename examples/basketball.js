@@ -1,6 +1,7 @@
 import {tiny, defs} from './common.js';
+import { Body, Simulation } from './collisions-demo.js';
 // Pull these names into this module's scope for convenience:
-const { vec3, vec4, vec, color, Mat4, Light, Shape, Material, Shader, Texture, Scene} = tiny;
+const { vec3, unsafe3, vec4, vec, color, Mat4, Light, Shape, Material, Shader, Texture, Scene} = tiny;
 
 export class Shape_From_File extends Shape {
     // **Shape_From_File** is a versatile standalone Shape that imports
@@ -105,7 +106,7 @@ export class Shape_From_File extends Shape {
 }
 
 
-export class Basketball_Game extends Scene
+export class Basketball_Game extends Simulation
   { constructor( context )     // The scene begins by requesting the camera, shapes, and materials it will need.
       { 
         super();    // First, include a secondary Scene that provides movement controls:
@@ -202,11 +203,11 @@ export class Basketball_Game extends Scene
       {
         if (this.mouseDown) 
         {
-            this.mouseX = event.clientX - 548;//(canvas.right - canvas.left)/2;
-            this.mouseY = -1 * (event.clientY - 308);//(canvas.bottom - canvas.top)/2);
-            //this.mouseX = (event.clientX - ((1087+5)/2))/30;
-            //this.mouseY = (459-event.clientY)/29;
-            console.log("X: " + this.mouseX + "\n" + "Y: " + this.mouseY + "\n")
+//             this.mouseX = event.clientX - 548;//(canvas.right - canvas.left)/2;
+//             this.mouseY = -1 * (event.clientY - 308);//(canvas.bottom - canvas.top)/2);
+            this.mouseX = (event.clientX - ((1270+191)/2))/34;
+            this.mouseY = (496-event.clientY)/33;
+            //console.log("X: " + event.clientX + "\n" + "Y: " + event.clientY + "\n")
         }
       }
 //     mouse_tracker( event )        // Mouse tracker for our canvas
@@ -266,8 +267,9 @@ export class Basketball_Game extends Scene
         const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
 
         // Draw the basketball
-        let ball_transform = Mat4.translation(0,1,-5);//Mat4.translation( 0 + this.mouseX, 1 + this.mouseY, -5 );
-        this.shapes.sphere4.draw( context, program_state, ball_transform, this.materials.ball );
+        let ball_transform = Mat4.translation( 0 + this.mouseX, 1 + this.mouseY, -5 );
+        //this.shapes.sphere4.draw( context, program_state, ball_transform, this.materials.ball );
+        new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( ball_transform, vec3( 0,0,0 ), vec3( 0,0,0 ) );
 
         // Draw the basketball hoop
         let hoop_transform = Mat4.translation(0,15.35,-23.5)
