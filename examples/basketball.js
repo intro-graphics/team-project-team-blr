@@ -1,110 +1,8 @@
-import {tiny, defs} from './common.js';
+import { tiny, defs } from './common.js';
 import { Body, Simulation } from './collisions-demo.js';
+import { Shape_From_File } from './obj-file-demo.js';
 // Pull these names into this module's scope for convenience:
 const { vec3, unsafe3, vec4, vec, color, Mat4, Light, Shape, Material, Shader, Texture, Scene} = tiny;
-
-export class Shape_From_File extends Shape {
-    // **Shape_From_File** is a versatile standalone Shape that imports
-    // all its arrays' data from an .obj 3D model file.
-    constructor(filename) {
-        super("position", "normal", "texture_coord");
-        // Begin downloading the mesh. Once that completes, return
-        // control to our parse_into_mesh function.
-        this.load_file(filename);
-    }
-
-    load_file(filename) {                             // Request the external file and wait for it to load.
-        // Failure mode:  Loads an empty shape.
-        return fetch(filename)
-            .then(response => {
-                if (response.ok) return Promise.resolve(response.text())
-                else return Promise.reject(response.status)
-            })
-            .then(obj_file_contents => this.parse_into_mesh(obj_file_contents))
-            .catch(error => {
-                this.copy_onto_graphics_card(this.gl);
-            })
-    }
-
-    parse_into_mesh(data) {                           // Adapted from the "webgl-obj-loader.js" library found online:
-        var verts = [], vertNormals = [], textures = [], unpacked = {};
-
-        unpacked.verts = [];
-        unpacked.norms = [];
-        unpacked.textures = [];
-        unpacked.hashindices = {};
-        unpacked.indices = [];
-        unpacked.index = 0;
-
-        var lines = data.split('\n');
-
-        var VERTEX_RE = /^v\s/;
-        var NORMAL_RE = /^vn\s/;
-        var TEXTURE_RE = /^vt\s/;
-        var FACE_RE = /^f\s/;
-        var WHITESPACE_RE = /\s+/;
-
-        for (var i = 0; i < lines.length; i++) {
-            var line = lines[i].trim();
-            var elements = line.split(WHITESPACE_RE);
-            elements.shift();
-
-            if (VERTEX_RE.test(line)) verts.push.apply(verts, elements);
-            else if (NORMAL_RE.test(line)) vertNormals.push.apply(vertNormals, elements);
-            else if (TEXTURE_RE.test(line)) textures.push.apply(textures, elements);
-            else if (FACE_RE.test(line)) {
-                var quad = false;
-                for (var j = 0, eleLen = elements.length; j < eleLen; j++) {
-                    if (j === 3 && !quad) {
-                        j = 2;
-                        quad = true;
-                    }
-                    if (elements[j] in unpacked.hashindices)
-                        unpacked.indices.push(unpacked.hashindices[elements[j]]);
-                    else {
-                        var vertex = elements[j].split('/');
-
-                        unpacked.verts.push(+verts[(vertex[0] - 1) * 3 + 0]);
-                        unpacked.verts.push(+verts[(vertex[0] - 1) * 3 + 1]);
-                        unpacked.verts.push(+verts[(vertex[0] - 1) * 3 + 2]);
-
-                        if (textures.length) {
-                            unpacked.textures.push(+textures[((vertex[1] - 1) || vertex[0]) * 2 + 0]);
-                            unpacked.textures.push(+textures[((vertex[1] - 1) || vertex[0]) * 2 + 1]);
-                        }
-
-                        unpacked.norms.push(+vertNormals[((vertex[2] - 1) || vertex[0]) * 3 + 0]);
-                        unpacked.norms.push(+vertNormals[((vertex[2] - 1) || vertex[0]) * 3 + 1]);
-                        unpacked.norms.push(+vertNormals[((vertex[2] - 1) || vertex[0]) * 3 + 2]);
-
-                        unpacked.hashindices[elements[j]] = unpacked.index;
-                        unpacked.indices.push(unpacked.index);
-                        unpacked.index += 1;
-                    }
-                    if (j === 3 && quad) unpacked.indices.push(unpacked.hashindices[elements[0]]);
-                }
-            }
-        }
-        {
-            const {verts, norms, textures} = unpacked;
-            for (var j = 0; j < verts.length / 3; j++) {
-                this.arrays.position.push(vec3(verts[3 * j], verts[3 * j + 1], verts[3 * j + 2]));
-                this.arrays.normal.push(vec3(norms[3 * j], norms[3 * j + 1], norms[3 * j + 2]));
-                this.arrays.texture_coord.push(vec(textures[2 * j], textures[2 * j + 1]));
-            }
-            this.indices = unpacked.indices;
-        }
-        this.normalize_positions(false);
-        this.ready = true;
-    }
-
-    draw(context, program_state, model_transform, material) {               // draw(): Same as always for shapes, but cancel all
-        // attempts to draw the shape before it loads:
-        if (this.ready)
-            super.draw(context, program_state, model_transform, material);
-    }
-}
-
 
 export class Basketball_Game extends Simulation
   { constructor( context )     // The scene begins by requesting the camera, shapes, and materials it will need.
@@ -171,8 +69,6 @@ export class Basketball_Game extends Simulation
 //         this.mouseY = 0;
 //         this.mouseDown = false;
 
-        //this.ball_transform = Mat4.translation( 0+this.mouseX,1+this.mouseY,-5 );
-
         /* =========================================================================================================== */
       }
 
@@ -203,41 +99,13 @@ export class Basketball_Game extends Simulation
       {
         if (this.mouseDown) 
         {
-//             this.mouseX = event.clientX - 548;//(canvas.right - canvas.left)/2;
-//             this.mouseY = -1 * (event.clientY - 308);//(canvas.bottom - canvas.top)/2);
             this.mouseX = (event.clientX - ((1270+191)/2))/34;
             this.mouseY = (496-event.clientY)/33;
             //console.log("X: " + event.clientX + "\n" + "Y: " + event.clientY + "\n")
+            console.log("X: " + this.mouseX + "\n" + "Y: " + this.mouseY + "\n")
         }
       }
-//     mouse_tracker( event )        // Mouse tracker for our canvas
-//       {
-//         var rect = document.getElementById("main-canvas").getBoundingClientRect();
-//         this.mouseX = event.clientX - (rect.left + rect.right)/2;
-//         this.mouseY = -1 * (event.clientY - (rect.bottom + rect.top - 379)/2);
-//         //console.log(this.mouseX, this.mouseY);
-//       }
 
-//     cast_ray()       
-//       {
-//         if (this.mouseX >= -540 && this.mouseX <= 540 && this.mouseY >= -300 && this.mouseY <= 300)     // Only perform ray cast if we clicked on the scene
-//           {  
-//             //console.log(this.mouseX, this.mouseY); 
-//             var norm_x = this.mouseX / 540.;    // Convert to normalized device coordinates x,y: [-1,1]
-//             var norm_y = this.mouseY / 300.;
-
-//             var ray_clip = Vec.of(norm_x, norm_y, -1.0, 1.0);   
-//             var ray_eye = Mat4.inverse( this.projection_transform ).times(ray_clip);    // Convert to eye space
-//             ray_eye = ray_eye.plus( Vec.of(0,0,0,-10.) );
-//             //console.log(ray_eye);
-//             var ray_world = this.initial_camera_location.times(ray_eye);        // Convert to world space
-//             ray_world = ray_world.to3().normalized();
-//             console.log(ray_world);
-
-//             // Check for intersection between ray and the basketball
-//             //var ray2center = 
-//           }
-//       }
 
     make_control_panel()            // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
       { this.key_triggered_button( "View scene",  [ "0" ], () => this.attached = () => this.initial_camera_location );
@@ -267,9 +135,17 @@ export class Basketball_Game extends Simulation
         const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
 
         // Draw the basketball
-        let ball_transform = Mat4.translation( 0 + this.mouseX, 1 + this.mouseY, -5 );
-        //this.shapes.sphere4.draw( context, program_state, ball_transform, this.materials.ball );
-        new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( ball_transform, vec3( 0,0,0 ), vec3( 0,0,0 ) );
+        if ( this.mouseY >= 0 ) 
+        {
+          let ball_transform = Mat4.translation(1 + this.mouseX, 1 + this.mouseY, -5);
+          this.shapes.sphere4.draw( context, program_state, ball_transform, this.materials.ball );
+        }
+        else    // Cannot drag the ball below the floor
+        {
+          let ball_transform = Mat4.translation(1 + this.mouseX, 1, -5);
+          this.shapes.sphere4.draw( context, program_state, ball_transform, this.materials.ball );
+        }
+        //new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( ball_transform, vec3( 0,0,0 ), vec3( 0,0,0 ) );
 
         // Draw the basketball hoop
         let hoop_transform = Mat4.translation(0,15.35,-23.5)
