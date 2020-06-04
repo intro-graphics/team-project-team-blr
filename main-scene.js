@@ -28,8 +28,8 @@ import { Text_Demo }
   from "./examples/text-demo.js"
 import { Transforms_Sandbox }
   from "./examples/transforms-sandbox.js"
-// import { Basketball }
-//   from "./examples/basketball.js"
+import { Basketball_Game }
+  from "./examples/basketball.js"
   
 Object.assign( defs,
                      { Axes_Viewer, Axes_Viewer_Test_Scene },
@@ -39,13 +39,15 @@ Object.assign( defs,
                      { Scene_To_Texture_Demo },
                      { Surfaces_Demo },
                      { Text_Demo },
-                     { Transforms_Sandbox } );
+                     { Transforms_Sandbox },
+                     { Basketball_Game } );
 
     // ******************** End extra step
 
 // (Can define Main_Scene's class here)
 
-const Main_Scene = Obj_File_Demo;
+const Main_Scene = Basketball_Game;
+//const Main_Scene = Axes_Viewer_Test_Scene;
 const Additional_Scenes = [];
 
 export { Main_Scene, Additional_Scenes, Canvas_Widget, Code_Widget, Text_Widget, defs }
