@@ -65,13 +65,14 @@ export class Basketball_Game extends Simulation
 //         mainCanvas.addEventListener("mousemove", this.track.bind(this));
 //         mainCanvas.addEventListener("mousedown", this.click.bind(this));
 //         mainCanvas.addEventListener("mouseup", this.unclick.bind(this));
-//         this.mouseX = 0;
-//         this.mouseY = 0;
-//         this.mouseDown = false;
 
            
 
         /* =========================================================================================================== */
+        this.launch = false;
+        this.mouseDown = false;
+        this.mouseX = 0;
+        this.mouseY = 0;
       }
 
     add_mouse_controls( canvas )
@@ -90,11 +91,13 @@ export class Basketball_Game extends Simulation
     click(event) 
       {
         this.mouseDown = true;
+        this.launch = false;
       }
 
     unclick(event) 
       {
         this.mouseDown = false;
+        this.launch = true;
       }
 
     track(event) 
@@ -105,9 +108,9 @@ export class Basketball_Game extends Simulation
 //             this.mouseY = -1 * (event.clientY - 308);//(canvas.bottom - canvas.top)/2);
             this.mouseX = (this.mouse_position(event)[0])/34;
             this.mouseY = (183-this.mouse_position(event)[1])/33;
-            console.log(this.mouse_position(event));
+            //console.log(this.mouse_position(event));
             //console.log("X: " + event.clientX + "\n" + "Y: " + event.clientY + "\n")
-            console.log("X: " + this.mouseX + "\n" + "Y: " + this.mouseY + "\n")
+            //console.log("X: " + this.mouseX + "\n" + "Y: " + this.mouseY + "\n")
         }
       }
 
@@ -122,13 +125,28 @@ export class Basketball_Game extends Simulation
       {               // update_state():  Override the base time-stepping code to say what this particular
                       // scene should do to its bodies every frame -- including applying forces.
                       // Generate additional moving bodies if there ever aren't enough:
-        this.bodies.push( new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( ...vec3(0,1,-5), vec3( 0,0,0 ), vec3( 0,0,0 ) ));
-    
+        if( this.launch === true && this.bodies.length < 1 ) {
+          let bt = this.ball_transform;
+          this.bodies.push( new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( bt, vec3(0, 0, 0), 0.5, vec3(1, 0, 0) ));
+        }
+
+        // move ball based on velocity
+        for( let b of this.bodies )
+        {                                         // Gravity on Earth, where 1 unit in world space = 1 meter:
+          b.linear_velocity[1] += dt * -0.8;
+                                                // If about to fall through floor, reverse y velocity:
+          if( b.center[1] < 1 && b.linear_velocity[1] < 0 ) {
+            // Dampen y velocity and angular velocity
+            b.linear_velocity[1] *= -0.8;
+            b.angular_velocity *= 0.8;
+          }
+        }
       }
 
 
     display( context, program_state )
-      { //super.display( context, program_state )
+      { 
+        super.display( context, program_state )
         program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, .1, 1000 );
         program_state.lights = [ new Light( vec4( 5,-10,5,1 ), color( 0, 1, 1, 1 ), 1000 ) ];
         program_state.set_camera( Mat4.look_at( vec3( 0,9,17 ), vec3( 0,5,-20 ), vec3( 0,1,0 ) ));
@@ -146,21 +164,22 @@ export class Basketball_Game extends Simulation
         }
 
         const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
-
         // Draw the basketball
         if ( this.mouseY >= 0 ) 
         {
-          //let ball_transform = Mat4.translation(1 + this.mouseX, 1 + this.mouseY, -5);
-          let ball_transform = Mat4.translation(0 + this.mouseX, 1 + this.mouseY, -5);
+          this.ball_transform = Mat4.translation(0 + this.mouseX, 1 + this.mouseY, -5);
           //this.bodies.push( new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( ball_transform, vec3( 0,0,0 ), vec3( 0,0,0 ) ));
           //this.shapes.sphere4.draw( context, program_state, ball_transform, this.materials.ball );
         }
         else    // Cannot drag the ball below the floor
         {
-          //let ball_transform = Mat4.translation(1 + this.mouseX, 1, -5);
-          let ball_transform = Mat4.translation(0 + this.mouseX, 1, -5);
+          this.ball_transform = Mat4.translation(0 + this.mouseX, 1, -5);
           //this.bodies.push( new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( ball_transform, vec3( 0,0,0 ), vec3( 0,0,0 ) ));
           //this.shapes.sphere4.draw( context, program_state, ball_transform, this.materials.ball );
+        }
+        if (this.launch === false) {
+          this.bodies = [];
+          this.shapes.sphere4.draw( context, program_state, this.ball_transform, this.materials.ball );
         }
         //new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( ball_transform, vec3( 0,0,0 ), vec3( 0,0,0 ) );
 
@@ -196,7 +215,5 @@ export class Basketball_Game extends Simulation
                 .times(Mat4.translation( 0,15,-35 ))
                 .times(Mat4.scale( 25,15,0 ));
         this.shapes.square.draw( context, program_state, wall_transform, this.materials.wall);  // Front wall
-
-
       }
   }
