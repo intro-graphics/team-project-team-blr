@@ -242,7 +242,7 @@ export class Basketball_Game extends Simulation
           let rand_x = Math.floor(Math.random() * 41) - 20;
           let rand_y = Math.floor(Math.random() * 21);
           console.log(rand_x, rand_y);
-          let tt = Mat4.translation( 0, 3, -35 );
+          let tt = Mat4.translation( rand_x, rand_y, -35 );
           this.targets.push( new Body( this.shapes.target, this.materials.target, vec3( 2,2,0.15 ) ).emplace( tt, vec3(0,0,0), 0));
         }
 
