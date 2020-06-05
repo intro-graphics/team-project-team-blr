@@ -146,6 +146,7 @@ export class Basketball_Game extends Simulation
         this.last_mouseX = 0;
         this.last_mouseY = 0;
         this.mouse_pos = Array(10).fill(0);
+        this.has_collided = false;
 
         this.time_elapsed = 0;
         this.time_elapsed_seconds = 0;
@@ -178,6 +179,7 @@ export class Basketball_Game extends Simulation
       {
         this.mouseDown = true;
         this.launch = false;
+        this.has_collided = false;
         if (this.game_time - this.time_elapsed_seconds < 0)
           this.time_elapsed = 0;
       }
@@ -297,8 +299,10 @@ export class Basketball_Game extends Simulation
           {
             if( a.check_if_colliding( b, collider ) )
             {
-              // increment score
-              this.score += 1;
+              // increment score only if launch has not had a collision yet
+              if (this.has_collided === false)
+                this.score += 1;
+              this.has_collided = true;
               
               console.log("Collision detected");      // If we get here, we collided, so turn red and zero out the
               this.targets.pop();                    // velocity so they don't inter-penetrate any further.
