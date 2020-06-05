@@ -244,7 +244,6 @@ export class Basketball_Game extends Simulation
         while( this.targets.length < 1 ) {
             let rand_x = Math.floor(Math.random() * 41) - 20;
             let rand_y = Math.floor(Math.random() * 20) + 1;
-            console.log(rand_x, rand_y);
             let tt = Mat4.translation( rand_x, rand_y, -35 );
             this.targets.push( new Body( this.shapes.target, this.materials.target, vec3( 1.5,1.5,0.15 ) ).emplace( tt, vec3(0,0,0), 0));
         }
@@ -300,12 +299,14 @@ export class Basketball_Game extends Simulation
             if( a.check_if_colliding( b, collider ) )
             {
               // increment score only if launch has not had a collision yet
-              if (this.has_collided === false)
-                this.score += 1;
+              if (this.has_collided === false) {
+                if (this.game_time - this.time_elapsed_seconds < 10)
+                  this.score += 5;
+                else
+                  this.score += 1;
+                this.targets.pop();
+              }
               this.has_collided = true;
-              
-              console.log("Collision detected");      // If we get here, we collided, so turn red and zero out the
-              this.targets.pop();                    // velocity so they don't inter-penetrate any further.
             }
           }
         }
@@ -313,15 +314,12 @@ export class Basketball_Game extends Simulation
         this.mouse_posY[9] = this.mouseY;
         this.mouse_posX.shift();
         this.mouse_posX[9] = this.mouseX;
-
-        //console.log(this.bodies);
       }
 
 
     display( context, program_state )
       { 
         super.display( context, program_state )
-        const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
         program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, .1, 1000 );
         program_state.lights = [ new Light( vec4( 5,-10,5,1 ), color( 0, 1, 1, 1 ), 1000 ) ];
         program_state.set_camera( Mat4.look_at( vec3( 0,9,17 ), vec3( 0,5,-20 ), vec3( 0,1,0 ) ));
@@ -359,6 +357,14 @@ export class Basketball_Game extends Simulation
         let scoreboard_transform = Mat4.translation( -17,20,-35 )
                 .times(Mat4.scale( 7,4,.25 ));
         this.shapes.cube.draw( context, program_state, scoreboard_transform, this.materials.board);
+
+        // Draw "BONUS!" only for last 10 seconds
+        if (this.game_time - this.time_elapsed_seconds < 10) {
+          let bonus_text_transform = Mat4.translation( -10,10,-34.99 )
+                  .times(Mat4.scale( 3,3,.25 ));
+          this.shapes.text.set_string( "BONUS!", context.context );
+          this.shapes.text.draw( context, program_state, bonus_text_transform, this.materials.text_img );
+        }
 
         // Draw "TIMER"
         let timer_title_transform = Mat4.translation( -23,22.5,-34.7 )
