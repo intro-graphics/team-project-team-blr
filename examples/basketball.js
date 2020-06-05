@@ -76,6 +76,7 @@ export class Basketball_Game extends Simulation
         this.mouseY = 0;
 
         this.time_elapsed = 0;
+        this.time_elapsed_seconds = 0;
         this.score = 0;
         this.high_score = 0;
 
@@ -131,7 +132,7 @@ export class Basketball_Game extends Simulation
       }
     get_timer_text(time_elapsed)
       {
-        let total_seconds = this.game_time - Math.floor(time_elapsed / 120);
+        let total_seconds = this.game_time - this.time_elapsed_seconds;
         if (total_seconds < 0)
           return "00:00";
         let minutes = Math.floor(total_seconds / 60);
@@ -156,6 +157,7 @@ export class Basketball_Game extends Simulation
 
         // increment timer
         this.time_elapsed += dt * 20;
+        this.time_elapsed_seconds = Math.floor(this.time_elapsed / 120);
 
         // update high score if necessary
         if (this.score > this.high_score)
