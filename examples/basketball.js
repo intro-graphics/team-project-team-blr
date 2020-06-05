@@ -119,7 +119,12 @@ export class Basketball_Game extends Simulation
                         ambient: 1,
                         diffusivity: 0,
                         specularity: 0, 
-                        texture: new Texture("assets/target.png") })
+                        texture: new Texture("assets/target.png") }),
+            ucla_w:   new Material( t_phong, {
+                        ambient: 1,
+                        diffusivity: 0,
+                        specularity: 0,
+                        texture: new Texture("assets/ucla.png") })
 
 //          hoop:     new Material( t_phong, {
 //                      ambient: 1,
@@ -263,7 +268,8 @@ export class Basketball_Game extends Simulation
 
         // set congrats at the end of the game
         if (this.game_time - this.time_elapsed_seconds <= 0) {
-          this.congrats = this.score.toString();
+          this.congrats = this.score.toString()
+          ;
         }
 
         // move ball based on velocity, which gets decremented over time 
@@ -391,6 +397,13 @@ export class Basketball_Game extends Simulation
           let congrats_text_3 = "graduates!";
           this.shapes.text.set_string( congrats_text_3, context.context );
           this.shapes.text.draw( context, program_state, congrats_text_3_transform, this.materials.text_img );
+
+          let wall_transform = Mat4.identity()
+                .times(Mat4.rotation( -Math.PI/2, 0,1,0 ))
+                .times(Mat4.rotation( Math.PI/2, 0,1,0 ))
+                .times(Mat4.translation( -2,11,-34.999 ))
+                .times(Mat4.scale( 28,12,0 ));
+          this.shapes.square.draw( context, program_state, wall_transform, this.materials.ucla_w);
         }
 
         // Draw "TIMER"
