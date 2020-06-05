@@ -153,7 +153,7 @@ export class Basketball_Game extends Simulation
         this.high_score = 0;
 
         // game duration in seconds
-        this.game_time = 10;
+        this.game_time = 120;
         this.last_mouseX = 0;
         this.last_mouseY = 0;
         this.mouse_posX = Array(10).fill(0);
@@ -239,11 +239,11 @@ export class Basketball_Game extends Simulation
         }
         
         while( this.targets.length < 1 ) {
-            let rand_x = Math.floor(Math.random() * 41) - 20;
-            let rand_y = Math.floor(Math.random() * 21);
-            console.log(rand_x, rand_y);
-            let tt = Mat4.translation( rand_x, rand_y, -35 );
-            this.targets.push( new Body( this.shapes.target, this.materials.target, vec3( 1.5,1.5,0.15 ) ).emplace( tt, vec3(0,0,0), 0));
+          let rand_x = Math.floor(Math.random() * 41) - 20;
+          let rand_y = Math.floor(Math.random() * 21);
+          console.log(rand_x, rand_y);
+          let tt = Mat4.translation( 0, 3, -35 );
+          this.targets.push( new Body( this.shapes.target, this.materials.target, vec3( 2,2,0.15 ) ).emplace( tt, vec3(0,0,0), 0));
         }
 
         // increment timer
@@ -291,6 +291,9 @@ export class Basketball_Game extends Simulation
           {
             if( a.check_if_colliding( b, collider ) )
             {
+              // increment score
+              this.score += 1;
+              
               console.log("Collision detected");      // If we get here, we collided, so turn red and zero out the
               this.targets.pop();                    // velocity so they don't inter-penetrate any further.
             }
