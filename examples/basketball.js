@@ -77,7 +77,7 @@ export class Basketball_Game extends Simulation
                          ball:   new defs.Subdivision_Sphere( 4 ),
                          target: new defs.Subdivision_Sphere( 4 ),
                          cube:      new defs.Cube(),
-//                          hoop:      new Shape_From_File("assets/basketball_hoop.obj"),
+                         //hoop:      new Shape_From_File("assets/basketball_hoop.obj"),
                          text:      new Text_Line(10)
                        };
                                      
@@ -236,9 +236,10 @@ export class Basketball_Game extends Simulation
           this.bodies.push( new Body( this.shapes.ball, this.materials.ball, vec3( 1,1,1 ) ).emplace( bt, vec3(3*mouse_velX, 6*mouse_velY, -8*mouse_velY), -0.5, vec3(1, 0, 0) ));
         }
         
+        // Create the target object 
         while( this.targets.length < 1 ) {
             let rand_x = Math.floor(Math.random() * 41) - 20;
-            let rand_y = Math.floor(Math.random() * 21);
+            let rand_y = Math.floor(Math.random() * 20) + 1;
             console.log(rand_x, rand_y);
             let tt = Mat4.translation( rand_x, rand_y, -35 );
             this.targets.push( new Body( this.shapes.target, this.materials.target, vec3( 1.5,1.5,0.15 ) ).emplace( tt, vec3(0,0,0), 0));
@@ -264,6 +265,11 @@ export class Basketball_Game extends Simulation
 
           if( b.center[2] < -34 && b.linear_velocity[2] < 0 ) {
             b.linear_velocity[2] *= -0.8;   // Dampen z velocity and angular velocity 
+            b.angular_velocity *= -0.8;
+          }
+
+          if( b.center[0] < -24 || b.center[0] > 24) {
+            b.linear_velocity[0] *= -0.8;   // Dampen x velocity and angular velocity
             b.angular_velocity *= -0.8;
           }
         }
