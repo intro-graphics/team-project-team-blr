@@ -126,8 +126,8 @@ export class Basketball_Game extends Simulation
                       // scene should do to its bodies every frame -- including applying forces.
                       // Generate additional moving bodies if there ever aren't enough:
         if( this.launch === true && this.bodies.length < 1 ) {
-            let bt = this.ball_transform;
-            this.bodies.push( new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( bt, vec3( 0,0,0 ), 0 ));
+          let bt = this.ball_transform;
+          this.bodies.push( new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( bt, vec3(0, 0, 0), 0.5, vec3(1, 0, 0) ));
         }
 
         // move ball based on velocity
@@ -135,8 +135,11 @@ export class Basketball_Game extends Simulation
         {                                         // Gravity on Earth, where 1 unit in world space = 1 meter:
           b.linear_velocity[1] += dt * -0.8;
                                                 // If about to fall through floor, reverse y velocity:
-          if( b.center[1] < 1 && b.linear_velocity[1] < 0 )
-            b.linear_velocity[1] *= -.8;
+          if( b.center[1] < 1 && b.linear_velocity[1] < 0 ) {
+            // Dampen y velocity and angular velocity
+            b.linear_velocity[1] *= -0.8;
+            b.angular_velocity *= 0.8;
+          }
         }
       }
 
