@@ -4,6 +4,7 @@ import { Shape_From_File } from './obj-file-demo.js';
 // Pull these names into this module's scope for convenience:
 const { vec3, unsafe3, vec4, vec, color, Mat4, Light, Shape, Material, Shader, Texture, Scene} = tiny;
 
+
 export class Basketball_Game extends Simulation
   { constructor( context )     // The scene begins by requesting the camera, shapes, and materials it will need.
       { 
@@ -65,10 +66,10 @@ export class Basketball_Game extends Simulation
 //         mainCanvas.addEventListener("mousemove", this.track.bind(this));
 //         mainCanvas.addEventListener("mousedown", this.click.bind(this));
 //         mainCanvas.addEventListener("mouseup", this.unclick.bind(this));
-//         this.mouseX = 0;
-//         this.mouseY = 0;
-//         this.mouseDown = false;
-
+        this.mouseX = 0;
+        this.mouseY = 0;
+        this.mouseDown = false;
+        
            
 
         /* =========================================================================================================== */
@@ -80,16 +81,20 @@ export class Basketball_Game extends Simulation
       this.mouse = { "from_center": vec( 0,0 ) };
       this.mouse_position = ( e, rect = canvas.getBoundingClientRect() ) => 
                                    vec( e.clientX - (rect.left + rect.right)/2, e.clientY - (rect.bottom + rect.top)/2 );
-      //console.log(canvas.getBoundingClientRect());
-                                // Set up mouse response.  The last one stops us from reacting if the mouse leaves the canvas:
+
+      // Set up mouse response.  The last one stops us from reacting if the mouse leaves the canvas:
       canvas  .addEventListener( "mousemove",  this.track.bind(this) );
       canvas  .addEventListener( "mousedown",  this.click.bind(this) );
       canvas  .addEventListener( "mouseup",    this.unclick.bind(this) );
+
+      this.currX = 0;
+      this.currY = 0;
     }
 
     click(event) 
       {
         this.mouseDown = true;
+        
       }
 
     unclick(event) 
@@ -113,19 +118,30 @@ export class Basketball_Game extends Simulation
       { this.key_triggered_button( "View scene",  [ "0" ], () => this.attached = () => this.initial_camera_location );
         this.new_line();
         //super.make_control_panel();
-
       }
+
     update_state( dt )
       {               // update_state():  Override the base time-stepping code to say what this particular
                       // scene should do to its bodies every frame -- including applying forces.
                       // Generate additional moving bodies if there ever aren't enough:
-        this.bodies.push( new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( ...vec3(0,1,-5), vec3( 0,0,0 ), vec3( 0,0,0 ) ));
-    
+        while( this.bodies.length < 1)
+        {
+          this.bodies.push( new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) )
+                .emplace( Mat4.translation(0  , 1 , 0), vec3( 0,0,0 ), 0 ));
+        }
+      
+//         for( let b of this.bodies )
+//         {                                         // Gravity on Earth, where 1 unit in world space = 1 meter:
+//           b.linear_velocity[1] += dt * -9.8;
+//                                                 // If about to fall through floor, reverse y velocity:
+//           if( b.center[1] < -8 && b.linear_velocity[1] < 0 )
+//             b.linear_velocity[1] *= -.8;
+//         }
       }
 
 
     display( context, program_state )
-      { //super.display( context, program_state )
+      { super.display( context, program_state )
         program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, .1, 1000 );
         program_state.lights = [ new Light( vec4( 5,-10,5,1 ), color( 0, 1, 1, 1 ), 1000 ) ];
         program_state.set_camera( Mat4.look_at( vec3( 0,9,17 ), vec3( 0,5,-20 ), vec3( 0,1,0 ) ));
@@ -139,7 +155,8 @@ export class Basketball_Game extends Simulation
         if( !this.mouse_enabled_canvases.has( context.canvas ) )
         { 
           this.add_mouse_controls( context.canvas );
-          this.mouse_enabled_canvases.add( context.canvas )
+          this.mouse_enabled_canvases.add( context.canvas );
+          //program_state.set_camera( Mat4.look_at( vec3( 0,9,17 ), vec3( 0,5,-20 ), vec3( 0,1,0 ) ));
         }
 
         const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
@@ -147,19 +164,16 @@ export class Basketball_Game extends Simulation
         // Draw the basketball
         if ( this.mouseY >= 0 ) 
         {
-          let ball_transform = Mat4.translation(0 + this.mouseX, 1 + this.mouseY, -5);
-          //let ball_transform = Mat4.translation(1, 1, -5);
+          //let ball_transform = Mat4.translation(0 + this.mouseX, 1 + this.mouseY, -5);
           //this.bodies.push( new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( ball_transform, vec3( 0,0,0 ), vec3( 0,0,0 ) ));
-          this.shapes.sphere4.draw( context, program_state, ball_transform, this.materials.ball );
+          //this.shapes.sphere4.draw( context, program_state, ball_transform, this.materials.ball );
         }
         else    // Cannot drag the ball below the floor
         {
-          let ball_transform = Mat4.translation(0 + this.mouseX, 1, -5);
-          //let ball_transform = Mat4.translation(1, 1, -5);
+          //let ball_transform = Mat4.translation(0 + this.mouseX, 1, -5);
           //this.bodies.push( new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( ball_transform, vec3( 0,0,0 ), vec3( 0,0,0 ) ));
-          this.shapes.sphere4.draw( context, program_state, ball_transform, this.materials.ball );
+          //this.shapes.sphere4.draw( context, program_state, ball_transform, this.materials.ball );
         }
-        //new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( ball_transform, vec3( 0,0,0 ), vec3( 0,0,0 ) );
 
         // Draw the basketball hoop
         let hoop_transform = Mat4.translation(0,15.35,-23.5)
