@@ -82,8 +82,6 @@ export class Basketball_Game extends Simulation
       canvas  .addEventListener( "mousedown",  this.click.bind(this) );
       canvas  .addEventListener( "mouseup",    this.unclick.bind(this) );
 
-      this.currX = 0;
-      this.currY = 0;
     }
 
     click(event) 
@@ -122,8 +120,7 @@ export class Basketball_Game extends Simulation
 
         //console.log(this.bodies.length);
         if( this.bodies.length === 0 ) {
-          this.bodies.push( new Body( this.shapes.hoop, this.materials.hoop, vec3( 1,1,1 ) )
-                .emplace(  Mat4.translation( 0,0,0 ), vec3(0,0,0), 0, vec3(0, 0, 0) ));
+          this.bodies.push( new Body( this.shapes.hoop, this.materials.hoop, vec3( 1.3,1.15,1.3 )).emplace(  this.hoop_transform, vec3(0,0,0), 0));
         }
 
         if( this.launch === true && this.bodies.length < 2 ) {
@@ -132,7 +129,8 @@ export class Basketball_Game extends Simulation
         }
 
         // move ball based on velocity
-        for( let b of this.bodies )
+        let b = this.bodies[1];
+        if( b )
         {                                         // Gravity on Earth, where 1 unit in world space = 1 meter:
           b.linear_velocity[1] += dt * -0.8;
                                                 // If about to fall through floor, reverse y velocity:
@@ -191,7 +189,7 @@ export class Basketball_Game extends Simulation
 
         
         // Draw the basketball hoop
-        //let hoop_transform = Mat4.translation(0,15.35,-23.5).times(Mat4.scale( 1.3,1.15,1.3 ));
+        this.hoop_transform = Mat4.translation(0,15.35,-23.5);//.times(Mat4.scale( 1.3,1.15,1.3 ));
         //this.shapes.hoop.draw( context, program_state, hoop_transform, this.materials.hoop );
 
         // Draw the scoreboard
