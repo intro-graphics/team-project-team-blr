@@ -115,10 +115,11 @@ export class Basketball_Game extends Simulation
                         specularity: 0,
                         texture: new Texture("assets/walls.png") }),
             
-            target:   new Material( phong, {color: color(1,0,0,1),
+            target:   new Material( t_phong, {
                         ambient: 1,
                         diffusivity: 0,
-                        specularity: 0, })
+                        specularity: 0, 
+                        texture: new Texture("assets/target.png") })
 
 //          hoop:     new Material( t_phong, {
 //                      ambient: 1,
@@ -229,7 +230,7 @@ export class Basketball_Game extends Simulation
       {               // update_state():  Override the base time-stepping code to say what this particular
                       // scene should do to its bodies every frame -- including applying forces.
                       // Generate additional moving bodies if there ever aren't enough:
-        let mouse_velY = Math.min((this.mouseY - this.mouse_posY[0])/(150*dt), 1);
+        let mouse_velY = Math.abs(Math.min((this.mouseY - this.mouse_posY[0])/(150*dt), 1));
         let mouse_velX = (this.mouseX - this.mouse_posX[0])/(150*dt);
 
         // Create the ball object if user has thrown the ball  
@@ -241,10 +242,10 @@ export class Basketball_Game extends Simulation
         // Create the target object 
         while( this.targets.length < 1 ) {
             let rand_x = Math.floor(Math.random() * 41) - 20;
-            let rand_y = Math.floor(Math.random() * 20) + 1;
+            let rand_y = Math.floor(Math.random() * 21) + 2;
             console.log(rand_x, rand_y);
-            let tt = Mat4.translation( rand_x, rand_y, -35 );
-            this.targets.push( new Body( this.shapes.target, this.materials.target, vec3( 1.5,1.5,0.15 ) ).emplace( tt, vec3(0,0,0), 0));
+            let tt = Mat4.translation( rand_x, rand_y, -35 );//.times(Mat4.rotation( Math.P, 0,1,0 ));
+            this.targets.push( new Body( this.shapes.target, this.materials.target, vec3( 1.5,1.5,0.1 ) ).emplace( tt, vec3(0,0,0), 0));
         }
 
         // increment timer
@@ -320,7 +321,7 @@ export class Basketball_Game extends Simulation
         const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
         program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, .1, 1000 );
         program_state.lights = [ new Light( vec4( 5,-10,5,1 ), color( 0, 1, 1, 1 ), 1000 ) ];
-        program_state.set_camera( Mat4.look_at( vec3( 0,9,17 ), vec3( 0,5,-20 ), vec3( 0,1,0 ) ));
+        //program_state.set_camera( Mat4.look_at( vec3( 0,9,17 ), vec3( 0,5,-20 ), vec3( 0,1,0 ) ));
 
         if( !context.scratchpad.controls ) 
         { 
@@ -332,7 +333,7 @@ export class Basketball_Game extends Simulation
         { 
           this.add_mouse_controls( context.canvas );
           this.mouse_enabled_canvases.add( context.canvas );
-          //program_state.set_camera( Mat4.look_at( vec3( 0,9,17 ), vec3( 0,5,-20 ), vec3( 0,1,0 ) ));
+          program_state.set_camera( Mat4.look_at( vec3( 0,9,17 ), vec3( 0,5,-20 ), vec3( 0,1,0 ) ));
         }
 
 
