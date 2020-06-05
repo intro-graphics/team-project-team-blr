@@ -118,7 +118,12 @@ export class Basketball_Game extends Simulation
             target:   new Material( phong, {color: color(1,0,0,1),
                         ambient: 1,
                         diffusivity: 0,
-                        specularity: 0, })
+                        specularity: 0, }),
+
+            target_blank:   new Material( phong, {color: color(0,0,0,0),
+                        ambient: 1,
+                        diffusivity: 0,
+                        specularity: 0, }),
 
 //          hoop:     new Material( t_phong, {
 //                      ambient: 1,
@@ -146,6 +151,9 @@ export class Basketball_Game extends Simulation
         this.last_mouseX = 0;
         this.last_mouseY = 0;
         this.mouse_pos = Array(10).fill(0);
+        this.rand_x = 1;
+        this.rand_y = 3;
+        this.first = true;
 
         this.time_elapsed = 0;
         this.time_elapsed_seconds = 0;
@@ -178,6 +186,7 @@ export class Basketball_Game extends Simulation
       {
         this.mouseDown = true;
         this.launch = false;
+        this.bodies = [];
       }
 
     unclick(event) 
@@ -235,13 +244,16 @@ export class Basketball_Game extends Simulation
           let bt = this.ball_transform;
           this.bodies.push( new Body( this.shapes.ball, this.materials.ball, vec3( 1,1,1 ) ).emplace( bt, vec3(3*mouse_velX, 6*mouse_velY, -8*mouse_velY), -0.5, vec3(1, 0, 0) ));
         }
-        
-        while( this.targets.length < 1 ) {
-            let rand_x = Math.floor(Math.random() * 41) - 20;
-            let rand_y = Math.floor(Math.random() * 21);
-            console.log(rand_x, rand_y);
-            let tt = Mat4.translation( rand_x, rand_y, -35 );
-            this.targets.push( new Body( this.shapes.target, this.materials.target, vec3( 1.5,1.5,0.15 ) ).emplace( tt, vec3(0,0,0), 0));
+
+        while( this.targets.length < 1 && this.launch) {
+            if(!this.first) {
+              this.rand_x = Math.floor(Math.random() * 41) - 20;
+              this.rand_y = Math.floor(Math.random() * 21);
+            }
+            else
+              this.first = false;
+            this.tt = Mat4.translation( this.rand_x, this.rand_y, -35 );
+            this.targets.push( new Body( this.shapes.target, this.materials.target_blank, vec3( 1.5,1.5,0.15 ) ).emplace( this.tt, vec3(0,0,0), 0));
         }
 
         // increment timer
@@ -335,6 +347,12 @@ export class Basketball_Game extends Simulation
           this.bodies = [];
           this.shapes.ball.draw( context, program_state, this.ball_transform, this.materials.ball );
         }
+
+        // Draw the target
+        //if (!this.launch) {
+          this.tt = Mat4.translation( this.rand_x, this.rand_y, -35 );
+          this.shapes.target.draw( context, program_state, this.tt.times(Mat4.scale(1.5,1.5,0.15)), this.materials.target)
+        //}
 
         // Draw the scoreboard
         let scoreboard_transform = Mat4.translation( -17,20,-35 )
