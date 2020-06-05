@@ -155,7 +155,7 @@ export class Basketball_Game extends Simulation
         this.high_score = 0;
 
         this.game_time = 120; // seconds
-        this.bonus_time = 10; // seconds
+        this.bonus_time = 30; // seconds
         this.last_mouseX = 0;
         this.last_mouseY = 0;
         this.mouse_posX = Array(10).fill(0);
@@ -244,10 +244,10 @@ export class Basketball_Game extends Simulation
         // Create the target object 
         while( this.targets.length < 1 ) {
             let rand_x = Math.floor(Math.random() * 41) - 20;
-            let rand_y = Math.floor(Math.random() * 21) + 2;
+            let rand_y = Math.floor(Math.random() * 19) + 2;
             console.log(rand_x, rand_y);
-            let tt = Mat4.translation( rand_x, rand_y, -35 );//.times(Mat4.rotation( Math.P, 0,1,0 ));
-            this.targets.push( new Body( this.shapes.target, this.materials.target, vec3( 1.5,1.5,0.1 ) ).emplace( tt, vec3(0,0,0), 0));
+            let tt = Mat4.rotation( -1*Math.PI/2, 0,1,0 ).times(Mat4.translation( -35, rand_y, rand_x ));//rand_x, rand_y, -35 ));
+            this.targets.push( new Body( this.shapes.target, this.materials.target, vec3( 0.15,1.5,1.4 ) ).emplace( tt, vec3(0,0,0), 0));
         }
 
         // increment timer
@@ -324,7 +324,7 @@ export class Basketball_Game extends Simulation
         super.display( context, program_state )
         program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, .1, 1000 );
         program_state.lights = [ new Light( vec4( 5,-10,5,1 ), color( 0, 1, 1, 1 ), 1000 ) ];
-        //program_state.set_camera( Mat4.look_at( vec3( 0,9,17 ), vec3( 0,5,-20 ), vec3( 0,1,0 ) ));
+        program_state.set_camera( Mat4.look_at( vec3( 0,9,17 ), vec3( 0,5,-20 ), vec3( 0,1,0 ) ));
 
         if( !context.scratchpad.controls ) 
         { 
@@ -336,7 +336,7 @@ export class Basketball_Game extends Simulation
         { 
           this.add_mouse_controls( context.canvas );
           this.mouse_enabled_canvases.add( context.canvas );
-          program_state.set_camera( Mat4.look_at( vec3( 0,9,17 ), vec3( 0,5,-20 ), vec3( 0,1,0 ) ));
+          //program_state.set_camera( Mat4.look_at( vec3( 0,9,17 ), vec3( 0,5,-20 ), vec3( 0,1,0 ) ));
         }
 
 
@@ -356,50 +356,50 @@ export class Basketball_Game extends Simulation
         }
 
         // Draw the scoreboard
-        let scoreboard_transform = Mat4.translation( -17,20,-35 )
-                .times(Mat4.scale( 7,4,.25 ));
+        let scoreboard_transform = Mat4.translation( 0,23,-35 )
+                .times(Mat4.scale( 24,1.5,.25 ));
         this.shapes.cube.draw( context, program_state, scoreboard_transform, this.materials.board);
 
         // Draw "BONUS!" only for last x seconds, where x is bonus time
         if (this.game_time - this.time_elapsed_seconds < this.bonus_time) {
           let bonus_text_transform = Mat4.translation( -10,10,-34.99 )
                   .times(Mat4.scale( 3,3,.25 ));
-          this.shapes.text.set_string( "BONUS!", context.context );
+          this.shapes.text.set_string( "Bonus!", context.context );
           this.shapes.text.draw( context, program_state, bonus_text_transform, this.materials.text_img );
         }
 
         // Draw "TIMER"
-        let timer_title_transform = Mat4.translation( -23,22.5,-34.7 )
+        let timer_title_transform = Mat4.translation( -23,22.6,-34.7 )
                 .times(Mat4.scale(0.65, 0.65, 0.65));
-        this.shapes.text.set_string( "TIMER", context.context );
+        this.shapes.text.set_string( "TIMER:", context.context );
         this.shapes.text.draw( context, program_state, timer_title_transform, this.materials.text_img );
 
         // Draw "SCORE"
-        let score_title_transform = Mat4.translation( -23,20,-34.7 )
+        let score_title_transform = Mat4.translation( -5,22.6,-34.7 )
                 .times(Mat4.scale(0.65, 0.65, 0.65));
-        this.shapes.text.set_string( "SCORE", context.context );
+        this.shapes.text.set_string( "SCORE:", context.context );
         this.shapes.text.draw( context, program_state, score_title_transform, this.materials.text_img );
 
         // Draw "HIGH SCORE"
-        let high_score_title_transform = Mat4.translation( -23,17.5,-34.7 )
+        let high_score_title_transform = Mat4.translation( 9,22.6,-34.7 )
                 .times(Mat4.scale(0.65, 0.65, 0.65));
-        this.shapes.text.set_string( "HIGH SCORE", context.context );
+        this.shapes.text.set_string( "HIGHSCORE:", context.context );
         this.shapes.text.draw( context, program_state, high_score_title_transform, this.materials.text_img );
 
         // Draw timer text
-        let timer_text_transform = Mat4.translation( -15.8,22.5,-34.7 )
-                .times(Mat4.scale(0.75, 0.75, 0.75));
+        let timer_text_transform = Mat4.translation( -16.8,22.6,-34.7 )
+                .times(Mat4.scale(0.65, 0.65, 0.65));
         this.shapes.text.set_string( this.get_timer_text(this.time_elapsed), context.context );
         this.shapes.text.draw( context, program_state, timer_text_transform, this.materials.text_img );
 
         // Draw score text
-        let score_text_transform = Mat4.translation( -12.5,20,-34.7 )
+        let score_text_transform = Mat4.translation( 1,22.6,-34.7 )
                 .times(Mat4.scale(0.75, 0.75, 0.75));
         this.shapes.text.set_string( this.get_score_text(this.score), context.context );
         this.shapes.text.draw( context, program_state, score_text_transform, this.materials.text_img );
 
         // Draw high score text
-        let high_score_text_transform = Mat4.translation( -12.5,17.5,-34.7 )
+        let high_score_text_transform = Mat4.translation( 19,22.6,-34.7 )
                 .times(Mat4.scale(0.75, 0.75, 0.75));
         this.shapes.text.set_string( this.get_score_text(this.high_score), context.context );
         this.shapes.text.draw( context, program_state, high_score_text_transform, this.materials.text_img );
