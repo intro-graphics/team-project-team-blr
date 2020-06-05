@@ -16,8 +16,6 @@ import { Axes_Viewer, Axes_Viewer_Test_Scene }
   from "./examples/axes-viewer.js"
 import { Inertia_Demo, Collision_Demo }
   from "./examples/collisions-demo.js"
-import { Inertia_Demo_B }
-  from "./examples/collisions-demo-b.js"
 import { Many_Lights_Demo }
   from "./examples/many-lights-demo.js"
 import { Obj_File_Demo }
@@ -36,7 +34,6 @@ import { Basketball_Game }
 Object.assign( defs,
                      { Axes_Viewer, Axes_Viewer_Test_Scene },
                      { Inertia_Demo, Collision_Demo },
-                     { Inertia_Demo_B },
                      { Many_Lights_Demo },
                      { Obj_File_Demo },
                      { Scene_To_Texture_Demo },
@@ -50,7 +47,7 @@ Object.assign( defs,
 // (Can define Main_Scene's class here)
 
 const Main_Scene = Basketball_Game;
-//const Main_Scene = Inertia_Demo_B;
+//const Main_Scene = Collision_Demo;
 const Additional_Scenes = [];
 
 export { Main_Scene, Additional_Scenes, Canvas_Widget, Code_Widget, Text_Widget, defs }

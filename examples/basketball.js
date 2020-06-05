@@ -109,8 +109,6 @@ export class Basketball_Game extends Simulation
         {
             this.mouseX = (this.mouse_position(event)[0])/34;
             this.mouseY = (183-this.mouse_position(event)[1])/33;
-            //console.log("X: " + event.clientX + "\n" + "Y: " + event.clientY + "\n")
-            //console.log("X: " + this.mouseX + "\n" + "Y: " + this.mouseY + "\n")
         }
       }
 
@@ -163,7 +161,7 @@ export class Basketball_Game extends Simulation
 
         const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
 
-        // Draw the basketball
+        // Draw the basketball      // z = -23.5 is where the hoop's center is located
         if ( this.mouseY >= 0 ) 
         {
           this.ball_transform = Mat4.translation(0 + this.mouseX, 1 + this.mouseY, -5);

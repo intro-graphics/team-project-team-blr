@@ -1,5 +1,4 @@
 import {tiny, defs} from './common.js';
-import { Shape_From_File } from './obj-file-demo.js';
 
                                                   // Pull these names into this module's scope for convenience:
 const { vec3, unsafe3, vec4, color, Mat4, Light, Shape, Material, Shader, Texture, Scene } = tiny;
@@ -135,144 +134,80 @@ export class Simulation extends Scene
 }
 
 
-// export class Test_Data
-// {                             // **Test_Data** pre-loads some Shapes and Textures that other Scenes can borrow.
-//   constructor()
-//     { this.textures = { rgb   : new Texture( "assets/rgb.jpg" ),
-//                         earth : new Texture( "assets/earth.gif" ),
-//                         grid  : new Texture( "assets/grid.png" ),
-//                         stars : new Texture( "assets/stars.png" ),
-//                         text  : new Texture( "assets/text.png" ),
-//                       }
-//       this.shapes = { donut  : new defs.Torus          ( 15, 15, [[0,2],[0,1]] ),
-//                       cone   : new defs.Closed_Cone    ( 4, 10,  [[0,2],[0,1]] ),
-//                       capped : new defs.Capped_Cylinder( 4, 12,  [[0,2],[0,1]] ),
-//                       ball   : new defs.Subdivision_Sphere( 3,   [[0,1],[0,1]] ),
-//                       cube   : new defs.Cube(),
-//                       prism  : new ( defs.Capped_Cylinder   .prototype.make_flat_shaded_version() )( 10, 10, [[0,2],[0,1]] ),
-//                       gem    : new ( defs.Subdivision_Sphere.prototype.make_flat_shaded_version() )( 2 ),
-//                       donut2 : new ( defs.Torus             .prototype.make_flat_shaded_version() )( 20, 20, [[0,2],[0,1]] ),
-//                     }; 
-//     }
-//   random_shape( shape_list = this.shapes )
-//     {                                       // random_shape():  Extract a random shape from this.shapes.
-//       const shape_names = Object.keys( shape_list );
-//       return shape_list[ shape_names[ ~~( shape_names.length * Math.random() ) ] ]
-//     }
-// }
+export class Test_Data
+{                             // **Test_Data** pre-loads some Shapes and Textures that other Scenes can borrow.
+  constructor()
+    { this.textures = { rgb   : new Texture( "assets/rgb.jpg" ),
+                        earth : new Texture( "assets/earth.gif" ),
+                        grid  : new Texture( "assets/grid.png" ),
+                        stars : new Texture( "assets/stars.png" ),
+                        text  : new Texture( "assets/text.png" ),
+                      }
+      this.shapes = { donut  : new defs.Torus          ( 15, 15, [[0,2],[0,1]] ),
+                      cone   : new defs.Closed_Cone    ( 4, 10,  [[0,2],[0,1]] ),
+                      capped : new defs.Capped_Cylinder( 4, 12,  [[0,2],[0,1]] ),
+                      ball   : new defs.Subdivision_Sphere( 3,   [[0,1],[0,1]] ),
+                      cube   : new defs.Cube(),
+                      prism  : new ( defs.Capped_Cylinder   .prototype.make_flat_shaded_version() )( 10, 10, [[0,2],[0,1]] ),
+                      gem    : new ( defs.Subdivision_Sphere.prototype.make_flat_shaded_version() )( 2 ),
+                      donut2 : new ( defs.Torus             .prototype.make_flat_shaded_version() )( 20, 20, [[0,2],[0,1]] ),
+                    }; 
+    }
+  random_shape( shape_list = this.shapes )
+    {                                       // random_shape():  Extract a random shape from this.shapes.
+      const shape_names = Object.keys( shape_list );
+      return shape_list[ shape_names[ ~~( shape_names.length * Math.random() ) ] ]
+    }
+}
 
 
-export class Inertia_Demo_B extends Simulation
+export class Inertia_Demo extends Simulation
 {                                           // ** Inertia_Demo** demonstration: This scene lets random initial momentums
                                             // carry several bodies until they fall due to gravity and bounce.
   constructor()
     { super();
-      //this.data = new Test_Data();
-      //this.shapes = Object.assign( {}, this.data.shapes );
-       this.shapes = {  square:    new defs.Square(),
-                         sphere4:   new defs.Subdivision_Sphere( 4 ),
-                         cube:      new defs.Cube(),
-                         hoop:      new Shape_From_File("assets/basketball_hoop.obj")
-                         //text:      new defs.Text_Line(10)
-                       };
-
+      this.data = new Test_Data();
+      this.shapes = Object.assign( {}, this.data.shapes );
+      this.shapes.square = new defs.Square();
       const shader = new defs.Fake_Bump_Map( 1 );
-      const t_phong = new defs.Textured_Phong();
-      const phong = new defs.Phong_Shader();
-      const bump  = new defs.Fake_Bump_Map();
-      this.materials =
-          { ball:     new Material( t_phong, {
-                        ambient: 1,
-                        diffusivity: 0,
-                        specularity: 0,
-                        texture: new Texture( "assets/ball.png") }),
-
-            board:    new Material( phong, { color: color( 0.15, 0.15, 0.15, 1 ),
-                        ambient: 1,
-                        diffusivity: 0,
-                        specularity: 0  }),
-
-            text_img: new Material( t_phong, { color: color( 1, 1, 1, 1 ), 
-                        ambient: 1,
-                        diffusivity: 0,
-                        specularity: 0,
-                        texture: new Texture("assets/text.png") }),
-
-            ground:   new Material( t_phong, {
-                        ambient: 1,
-                        diffusivity: 0,
-                        specularity: 0,
-                        texture: new Texture("assets/court.png") }),
-
-            wall:     new Material( t_phong, {
-                        ambient: 1,
-                        diffusivity: 0,
-                        specularity: 0,
-                        texture: new Texture("assets/walls.png") }),
-
-            hoop:     new Material( t_phong, {
-                        ambient: 1,
-                        diffusivity: 0,
-                        specularity: 0,
-                        texture: new Texture("assets/basketball_hoop_re.jpg") })
-          };
-
+      this.material = new Material( shader, { color: color( .4,.8,.4,1 ),
+                                  ambient:.4, texture: this.data.textures.stars })
     }
   random_color() { return this.material.override( color( .6,.6*Math.random(),.6*Math.random(),1 ) ); }
   update_state( dt )
     {                 // update_state():  Override the base time-stepping code to say what this particular
                       // scene should do to its bodies every frame -- including applying forces.
                       // Generate additional moving bodies if there ever aren't enough:
-      while( this.bodies.length < 1 )
-        this.bodies.push( new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) )
-              .emplace( Mat4.translation( ...vec3( 0,10,-5 ) ),
-                        vec3( 0,1,0 ).times(3), 0 ) );
+      while( this.bodies.length < 150 )
+        this.bodies.push( new Body( this.data.random_shape(), this.random_color(), vec3( 1,1+Math.random(),1 ) )
+              .emplace( Mat4.translation( ...vec3( 0,15,0 ).randomized(10) ),
+                        vec3( 0,-1,0 ).randomized(2).normalized().times(3), Math.random() ) );
       
-//       for( let b of this.bodies )
-//       {                                         // Gravity on Earth, where 1 unit in world space = 1 meter:
-//         b.linear_velocity[1] += dt * -9.8;
-//                                                 // If about to fall through floor, reverse y velocity:
-//         if( b.center[1] < -8 && b.linear_velocity[1] < 0 )
-//           b.linear_velocity[1] *= -.8;
-//       }
+      for( let b of this.bodies )
+      {                                         // Gravity on Earth, where 1 unit in world space = 1 meter:
+        b.linear_velocity[1] += dt * -9.8;
+                                                // If about to fall through floor, reverse y velocity:
+        if( b.center[1] < -8 && b.linear_velocity[1] < 0 )
+          b.linear_velocity[1] *= -.8;
+      }
                                                       // Delete bodies that stop or stray too far away:
       this.bodies = this.bodies.filter( b => b.center.norm() < 50 && b.linear_velocity.norm() > 2 );
     }
-
   display( context, program_state )
     {                                 // display(): Draw everything else in the scene besides the moving bodies.
       super.display( context, program_state );
-      program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, .1, 1000 );
-      program_state.lights = [ new Light( vec4( 0,-5,-10,1 ), color( 1,1,1,1 ), 100000 ) ];
 
       if( !context.scratchpad.controls ) 
         { this.children.push( context.scratchpad.controls = new defs.Movement_Controls() );
           this.children.push( new defs.Program_State_Viewer() );
-          program_state.set_camera( Mat4.look_at( vec3( 0,9,17 ), vec3( 0,5,-20 ), vec3( 0,1,0 ) ));    // Locate the camera here (inverted matrix).
+          program_state.set_camera( Mat4.translation( 0,0,-50 ) );    // Locate the camera here (inverted matrix).
         }
-
-      // Draw the ground:
-      this.shapes.square.draw( context, program_state, Mat4.rotation( Math.PI/2, 0,1,0 )
-                .times(Mat4.rotation( Math.PI/2, 1,0,0 ))
-                .times(Mat4.scale( 35,25,1 )),
-                this.materials.ground );
-
-      // Draw the walls 
-        let wall_transform = Mat4.rotation( Math.PI/2, 0,1,0 )
-                .times(Mat4.translation( 0,15,25 ))
-                .times(Mat4.scale( 35,15,0 ));
-        this.shapes.square.draw( context, program_state, wall_transform, this.materials.wall);  // Left wall
-        wall_transform = Mat4.identity()
-                .times(Mat4.rotation( Math.PI/2, 0,1,0 ))
-                .times(Mat4.translation( 0,15,-25 ))
-                .times(Mat4.scale( 35,15,0 ));
-        this.shapes.square.draw( context, program_state, wall_transform, this.materials.wall);  // Right wall
-        wall_transform = Mat4.identity()
-                .times(Mat4.rotation( -Math.PI/2, 0,1,0 ))
-                .times(Mat4.rotation( Math.PI/2, 0,1,0 ))
-                .times(Mat4.translation( 0,15,-35 ))
-                .times(Mat4.scale( 25,15,0 ));
-        this.shapes.square.draw( context, program_state, wall_transform, this.materials.wall);  // Front wall
+      program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, 1, 500 );
+      program_state.lights = [ new Light( vec4( 0,-5,-10,1 ), color( 1,1,1,1 ), 100000 ) ];
+                                                                                              // Draw the ground:
+      this.shapes.square.draw( context, program_state, Mat4.translation( 0,-10,0 )
+                                       .times( Mat4.rotation( Math.PI/2,   1,0,0 ) ).times( Mat4.scale( 50,50,1 ) ),
+                               this.material.override( this.data.textures.earth ) );
     }
   show_explanation( document_element )
     { document_element.innerHTML += `<p>This demo lets random initial momentums carry bodies until they fall and bounce.  It shows a good way to do incremental movements, which are crucial for making objects look like they're moving on their own instead of following a pre-determined path.  Animated objects look more real when they have inertia and obey physical laws, instead of being driven by simple sinusoids or periodic functions.
@@ -283,7 +218,7 @@ export class Inertia_Demo_B extends Simulation
 }
 
 
-export class Collision_Demo_B extends Simulation
+export class Collision_Demo extends Simulation
 {                                               // **Collision_Demo** demonstration: Detect when some flying objects
                                                 // collide with one another, coloring them red.
   constructor()
