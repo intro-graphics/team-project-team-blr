@@ -1,6 +1,7 @@
 import { tiny, defs } from './common.js';
 import { Body, Simulation } from './collisions-demo.js';
 import { Shape_From_File } from './obj-file-demo.js';
+import { Text_Line } from './text-demo.js';
 // Pull these names into this module's scope for convenience:
 const { vec3, unsafe3, vec4, vec, color, Mat4, Light, Shape, Material, Shader, Texture, Scene} = tiny;
 
@@ -14,8 +15,8 @@ export class Basketball_Game extends Simulation
         this.shapes = {  square:    new defs.Square(),
                          sphere4:   new defs.Subdivision_Sphere( 4 ),
                          cube:      new defs.Cube(),
-                         hoop:      new Shape_From_File("assets/basketball_hoop.obj")
-                         //text:      new defs.Text_Line(10)
+                         hoop:      new Shape_From_File("assets/basketball_hoop.obj"),
+                         text:      new Text_Line(10)
                        };
                                      
         // Make some Material objects available to you:
@@ -65,9 +66,17 @@ export class Basketball_Game extends Simulation
         this.mouseDown = false;
         this.mouseX = 0;
         this.mouseY = 0;
+
+        this.time_elapsed = 0;
+        this.time_elapsed_seconds = 0;
+        this.score = 0;
+        this.high_score = 0;
+
+        // game duration in seconds
+        this.game_time = 120;
         this.last_mouseX = 0;
         this.last_mouseY = 0;
-        this.mouse_pos = Array(100).fill(0);
+        this.mouse_pos = Array(10).fill(0);
       }
 
     add_mouse_controls( canvas )
@@ -111,28 +120,50 @@ export class Basketball_Game extends Simulation
         this.new_line();
         //super.make_control_panel();
       }
-
+    get_timer_text(time_elapsed)
+      {
+        let total_seconds = this.game_time - this.time_elapsed_seconds;
+        if (total_seconds < 0)
+          return "00:00";
+        let minutes = Math.floor(total_seconds / 60);
+        let seconds = total_seconds - minutes * 60;
+        let minutes_text = minutes < 10 ? "0" + minutes.toString() : minutes.toString();
+        let seconds_text = seconds < 10 ? "0" + seconds.toString() : seconds.toString();
+        return minutes_text + ":" + seconds_text;
+      }
+    get_score_text(score)
+      {
+        let score_text = score < 10 ? "0" + score.toString() : score.toString();
+        return score_text;
+      }
     update_state( dt )
       {               // update_state():  Override the base time-stepping code to say what this particular
                       // scene should do to its bodies every frame -- including applying forces.
                       // Generate additional moving bodies if there ever aren't enough:
-        let mouse_vel = (this.mouseY - this.last_mouseY)/(dt*10);
-
-        //console.log(this.bodies.length);
+        let mouse_vel = Math.min((this.mouseY - this.mouse_pos[0])/(150*dt), 1);
+        
         if( this.bodies.length === 0 ) {
           this.bodies.push( new Body( this.shapes.hoop, this.materials.hoop, vec3( 1.3,1.15,1.3 )).emplace(  this.hoop_transform, vec3(0,0,0), 0));
         }
 
         if( this.launch === true && this.bodies.length < 2 ) {
           let bt = this.ball_transform;
-          this.bodies.push( new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( bt, vec3(0, 3, -4.5), 0.5, vec3(1, 0, 0) ));
+          this.bodies.push( new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( bt, vec3(0, 9, -4).times(mouse_vel), 0.5, vec3(1, 0, 0) ));
         }
+
+        // increment timer
+        this.time_elapsed += dt * 20;
+        this.time_elapsed_seconds = Math.floor(this.time_elapsed / 120);
+
+        // update high score if necessary
+        if (this.score > this.high_score)
+          this.high_score = this.score;
 
         // move ball based on velocity
         let b = this.bodies[1];
         if( b )
         {                                         // Gravity on Earth, where 1 unit in world space = 1 meter:
-          b.linear_velocity[1] += dt * -0.8;
+          b.linear_velocity[1] += dt * -2.8;
                                                 // If about to fall through floor, reverse y velocity:
           if( b.center[1] < 1 && b.linear_velocity[1] < 0 ) {
             // Dampen y velocity and angular velocity
@@ -148,6 +179,8 @@ export class Basketball_Game extends Simulation
         }
         this.last_mouseX = this.mouseX;
         this.last_mouseY = this.mouseY;
+        this.mouse_pos.shift();
+        this.mouse_pos[9] = this.mouseY;
       }
 
 
@@ -196,6 +229,42 @@ export class Basketball_Game extends Simulation
         let scoreboard_transform = Mat4.translation( -17,20,-35 )
                 .times(Mat4.scale( 7,4,.25 ));
         this.shapes.cube.draw( context, program_state, scoreboard_transform, this.materials.board);
+
+        // Draw "TIMER"
+        let timer_title_transform = Mat4.translation( -20.5,21,-30 )
+                .times(Mat4.scale(0.5, 0.5, 0.5));
+        this.shapes.text.set_string( "TIMER", context.context );
+        this.shapes.text.draw( context, program_state, timer_title_transform, this.materials.text_img );
+
+        // Draw "SCORE"
+        let score_title_transform = Mat4.translation( -20.5,19,-30 )
+                .times(Mat4.scale(0.5, 0.5, 0.5));
+        this.shapes.text.set_string( "SCORE", context.context );
+        this.shapes.text.draw( context, program_state, score_title_transform, this.materials.text_img );
+
+        // Draw "HIGH SCORE"
+        let high_score_title_transform = Mat4.translation( -20.5,17,-30 )
+                .times(Mat4.scale(0.5, 0.5, 0.5));
+        this.shapes.text.set_string( "HIGH SCORE", context.context );
+        this.shapes.text.draw( context, program_state, high_score_title_transform, this.materials.text_img );
+
+        // Draw timer text
+        let timer_text_transform = Mat4.translation( -14.5,21,-30 )
+                .times(Mat4.scale(0.75, 0.75, 0.75));
+        this.shapes.text.set_string( this.get_timer_text(this.time_elapsed), context.context );
+        this.shapes.text.draw( context, program_state, timer_text_transform, this.materials.text_img );
+
+        // Draw score text
+        let score_text_transform = Mat4.translation( -11.1,19,-30 )
+                .times(Mat4.scale(0.75, 0.75, 0.75));
+        this.shapes.text.set_string( this.get_score_text(this.score), context.context );
+        this.shapes.text.draw( context, program_state, score_text_transform, this.materials.text_img );
+
+        // Draw high score text
+        let high_score_text_transform = Mat4.translation( -11.1,17,-30 )
+                .times(Mat4.scale(0.75, 0.75, 0.75));
+        this.shapes.text.set_string( this.get_score_text(this.high_score), context.context );
+        this.shapes.text.draw( context, program_state, high_score_text_transform, this.materials.text_img );
 
         // Draw the ground 
         let ground_transform = Mat4.rotation( Math.PI/2, 0,1,0 )
