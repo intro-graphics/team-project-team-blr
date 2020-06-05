@@ -178,6 +178,8 @@ export class Basketball_Game extends Simulation
       {
         this.mouseDown = true;
         this.launch = false;
+        if (this.game_time - this.time_elapsed_seconds < 0)
+          this.time_elapsed = 0;
       }
 
     unclick(event) 
@@ -252,6 +254,10 @@ export class Basketball_Game extends Simulation
         // update high score if necessary
         if (this.score > this.high_score)
           this.high_score = this.score;
+        
+        // reset score if timer is zero
+        if (this.game_time - this.time_elapsed_seconds < 0)
+          this.score = 0;
 
         // move ball based on velocity, which gets decremented over time 
         for( let b of this.bodies ) {                                         
@@ -291,6 +297,9 @@ export class Basketball_Game extends Simulation
           {
             if( a.check_if_colliding( b, collider ) )
             {
+              // increment score
+              this.score += 1;
+              
               console.log("Collision detected");      // If we get here, we collided, so turn red and zero out the
               this.targets.pop();                    // velocity so they don't inter-penetrate any further.
             }
