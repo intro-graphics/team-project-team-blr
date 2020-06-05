@@ -143,11 +143,12 @@ export class Basketball_Game extends Simulation
         let mouse_vel = Math.min((this.mouseY - this.mouse_pos[0])/(150*dt), 1);
         
         //console.log(this.bodies.length);
-        if( this.bodies.length === 0 ) {
-          this.bodies.push( new Body( this.shapes.hoop, this.materials.hoop, vec3( 1.3,1.15,1.3 )).emplace(  this.hoop_transform, vec3(0,0,0), 0));
+        if( this.launch && this.bodies.length === 0 ) {
+          let ht = this.hoop_transform;
+          this.bodies.push( new Body( this.shapes.hoop, this.materials.hoop, vec3( 1.3,1.15,1.3 )).emplace( ht, vec3(0,0,0), 0));
         }
 
-        if( this.launch === true && this.bodies.length < 2 ) {
+        if( this.launch && this.bodies.length < 2 ) {
           let bt = this.ball_transform;
           this.bodies.push( new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( bt, vec3(0, 9, -4).times(mouse_vel), 0.5, vec3(1, 0, 0) ));
         }
@@ -182,6 +183,8 @@ export class Basketball_Game extends Simulation
         this.last_mouseY = this.mouseY;
         this.mouse_pos.shift();
         this.mouse_pos[9] = this.mouseY;
+
+        console.log(this.bodies);
       }
 
 
@@ -216,16 +219,18 @@ export class Basketball_Game extends Simulation
         {
           this.ball_transform = Mat4.translation(0 + this.mouseX, 1, -5);
         }
+        // Draw the basketball hoop
+        this.hoop_transform = Mat4.translation(0,15.35,-23.5);//.times(Mat4.scale( 1.3,1.15,1.3 ));
+        
         if (this.launch === false) {
           this.bodies = [];
+          let ht = this.hoop_transform.times(Mat4.scale(1.3,1.15,1.3));
+          this.shapes.hoop.draw( context, program_state, ht, this.materials.hoop );
           this.shapes.sphere4.draw( context, program_state, this.ball_transform, this.materials.ball );
         }
 
         
-        // Draw the basketball hoop
-        this.hoop_transform = Mat4.translation(0,15.35,-23.5);//.times(Mat4.scale( 1.3,1.15,1.3 ));
-        //this.shapes.hoop.draw( context, program_state, hoop_transform, this.materials.hoop );
-
+        
         // Draw the scoreboard
         let scoreboard_transform = Mat4.translation( -17,20,-35 )
                 .times(Mat4.scale( 7,4,.25 ));
