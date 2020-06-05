@@ -69,8 +69,6 @@ export class Basketball_Game extends Simulation
         this.mouseX = 0;
         this.mouseY = 0;
         this.mouseDown = false;
-        
-           
 
         /* =========================================================================================================== */
       }
@@ -127,16 +125,16 @@ export class Basketball_Game extends Simulation
         while( this.bodies.length < 1)
         {
           this.bodies.push( new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) )
-                .emplace( Mat4.translation(0  , 1 , 0), vec3( 0,0,0 ), 0 ));
+                .emplace( this.ball_transform, vec3( 0,-.1,0 ), 0 ));
         }
       
-//         for( let b of this.bodies )
-//         {                                         // Gravity on Earth, where 1 unit in world space = 1 meter:
-//           b.linear_velocity[1] += dt * -9.8;
-//                                                 // If about to fall through floor, reverse y velocity:
-//           if( b.center[1] < -8 && b.linear_velocity[1] < 0 )
-//             b.linear_velocity[1] *= -.8;
-//         }
+        for( let b of this.bodies )
+        {                                         // Gravity on Earth, where 1 unit in world space = 1 meter:
+          b.linear_velocity[1] += dt * -9.8;
+                                                // If about to fall through floor, reverse y velocity:
+          if( b.center[1] < 1 && b.linear_velocity[1] < 0 )
+            b.linear_velocity[1] *= -.8;
+        }
       }
 
 
@@ -144,7 +142,7 @@ export class Basketball_Game extends Simulation
       { super.display( context, program_state )
         program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, .1, 1000 );
         program_state.lights = [ new Light( vec4( 5,-10,5,1 ), color( 0, 1, 1, 1 ), 1000 ) ];
-        program_state.set_camera( Mat4.look_at( vec3( 0,9,17 ), vec3( 0,5,-20 ), vec3( 0,1,0 ) ));
+        //program_state.set_camera( Mat4.look_at( vec3( 0,9,17 ), vec3( 0,5,-20 ), vec3( 0,1,0 ) ));
 
         if( !context.scratchpad.controls ) 
         { 
@@ -156,7 +154,7 @@ export class Basketball_Game extends Simulation
         { 
           this.add_mouse_controls( context.canvas );
           this.mouse_enabled_canvases.add( context.canvas );
-          //program_state.set_camera( Mat4.look_at( vec3( 0,9,17 ), vec3( 0,5,-20 ), vec3( 0,1,0 ) ));
+          program_state.set_camera( Mat4.look_at( vec3( 0,9,17 ), vec3( 0,5,-20 ), vec3( 0,1,0 ) ));
         }
 
         const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
@@ -164,15 +162,11 @@ export class Basketball_Game extends Simulation
         // Draw the basketball
         if ( this.mouseY >= 0 ) 
         {
-          //let ball_transform = Mat4.translation(0 + this.mouseX, 1 + this.mouseY, -5);
-          //this.bodies.push( new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( ball_transform, vec3( 0,0,0 ), vec3( 0,0,0 ) ));
-          //this.shapes.sphere4.draw( context, program_state, ball_transform, this.materials.ball );
+          this.ball_transform = Mat4.translation(0 + this.mouseX, 10 + this.mouseY, -5);
         }
         else    // Cannot drag the ball below the floor
         {
-          //let ball_transform = Mat4.translation(0 + this.mouseX, 1, -5);
-          //this.bodies.push( new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( ball_transform, vec3( 0,0,0 ), vec3( 0,0,0 ) ));
-          //this.shapes.sphere4.draw( context, program_state, ball_transform, this.materials.ball );
+          this.ball_transform = Mat4.translation(0 + this.mouseX, 1, -5);
         }
 
         // Draw the basketball hoop
