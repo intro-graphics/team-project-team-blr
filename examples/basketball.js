@@ -60,16 +60,7 @@ export class Basketball_Game extends Simulation
           };
 
         /* ================================= ATTRIBUTES FOR BASKETBALL_SCENE ========================================= */
-   
-//         var rect = mainCanvas.getBoundingClientRect();
-//         console.log(rect);
-//         mainCanvas.addEventListener("mousemove", this.track.bind(this));
-//         mainCanvas.addEventListener("mousedown", this.click.bind(this));
-//         mainCanvas.addEventListener("mouseup", this.unclick.bind(this));
 
-           
-
-        /* =========================================================================================================== */
         this.launch = false;
         this.mouseDown = false;
         this.mouseX = 0;
@@ -128,8 +119,14 @@ export class Basketball_Game extends Simulation
                       // scene should do to its bodies every frame -- including applying forces.
                       // Generate additional moving bodies if there ever aren't enough:
         let mouse_vel = (this.mouseY - this.last_mouseY)/(dt*10);
-                      
-        if( this.launch === true && this.bodies.length < 1 ) {
+
+        //console.log(this.bodies.length);
+        if( this.bodies.length === 0 ) {
+          this.bodies.push( new Body( this.shapes.hoop, this.materials.hoop, vec3( 1,1,1 ) )
+                .emplace(  Mat4.translation( 0,0,0 ), vec3(0,0,0), 0, vec3(0, 0, 0) ));
+        }
+
+        if( this.launch === true && this.bodies.length < 2 ) {
           let bt = this.ball_transform;
           this.bodies.push( new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( bt, vec3(0, 3, -4.5), 0.5, vec3(1, 0, 0) ));
         }
@@ -144,6 +141,12 @@ export class Basketball_Game extends Simulation
             b.linear_velocity[1] *= -0.8;
             b.angular_velocity *= 0.8;
           }
+
+          if( b.center[2] < -34 && b.linear_velocity[2] < 0 ) {
+            // Dampen z velocity and angular velocity  
+            b.linear_velocity[2] *= -0.8;
+          }
+
         }
         this.last_mouseX = this.mouseX;
         this.last_mouseY = this.mouseY;
@@ -153,6 +156,7 @@ export class Basketball_Game extends Simulation
     display( context, program_state )
       { 
         super.display( context, program_state )
+        const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
         program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, .1, 1000 );
         program_state.lights = [ new Light( vec4( 5,-10,5,1 ), color( 0, 1, 1, 1 ), 1000 ) ];
         program_state.set_camera( Mat4.look_at( vec3( 0,9,17 ), vec3( 0,5,-20 ), vec3( 0,1,0 ) ));
@@ -170,7 +174,6 @@ export class Basketball_Game extends Simulation
           //program_state.set_camera( Mat4.look_at( vec3( 0,9,17 ), vec3( 0,5,-20 ), vec3( 0,1,0 ) ));
         }
 
-        const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
 
         // Draw the basketball      // z = -23.5 is where the hoop's center is located
         if ( this.mouseY >= 0 ) 
@@ -188,9 +191,8 @@ export class Basketball_Game extends Simulation
 
         
         // Draw the basketball hoop
-        let hoop_transform = Mat4.translation(0,15.35,-23.5)
-                .times(Mat4.scale( 1.3,1.15,1.3 ));
-        this.shapes.hoop.draw( context, program_state, hoop_transform, this.materials.hoop );
+        //let hoop_transform = Mat4.translation(0,15.35,-23.5).times(Mat4.scale( 1.3,1.15,1.3 ));
+        //this.shapes.hoop.draw( context, program_state, hoop_transform, this.materials.hoop );
 
         // Draw the scoreboard
         let scoreboard_transform = Mat4.translation( -17,20,-35 )
