@@ -107,7 +107,7 @@ export class Basketball_Game extends Simulation
             this.mouseX = (this.mouse_position(event)[0])/34;
             this.mouseY = (183-this.mouse_position(event)[1])/33;
             //console.log("X: " + event.clientX + "\n" + "Y: " + event.clientY + "\n")
-            console.log("X: " + this.mouseX + "\n" + "Y: " + this.mouseY + "\n")
+            //console.log("X: " + this.mouseX + "\n" + "Y: " + this.mouseY + "\n")
         }
       }
 
@@ -139,10 +139,11 @@ export class Basketball_Game extends Simulation
 
 
     display( context, program_state )
-      { super.display( context, program_state )
+      { 
+        super.display( context, program_state )
         program_state.projection_transform = Mat4.perspective( Math.PI/4, context.width/context.height, .1, 1000 );
         program_state.lights = [ new Light( vec4( 5,-10,5,1 ), color( 0, 1, 1, 1 ), 1000 ) ];
-        //program_state.set_camera( Mat4.look_at( vec3( 0,9,17 ), vec3( 0,5,-20 ), vec3( 0,1,0 ) ));
+        program_state.set_camera( Mat4.look_at( vec3( 0,9,17 ), vec3( 0,5,-20 ), vec3( 0,1,0 ) ));
 
         if( !context.scratchpad.controls ) 
         { 
@@ -154,11 +155,10 @@ export class Basketball_Game extends Simulation
         { 
           this.add_mouse_controls( context.canvas );
           this.mouse_enabled_canvases.add( context.canvas );
-          program_state.set_camera( Mat4.look_at( vec3( 0,9,17 ), vec3( 0,5,-20 ), vec3( 0,1,0 ) ));
+          //program_state.set_camera( Mat4.look_at( vec3( 0,9,17 ), vec3( 0,5,-20 ), vec3( 0,1,0 ) ));
         }
 
         const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
-
         // Draw the basketball
         if ( this.mouseY >= 0 ) 
         {
@@ -201,7 +201,5 @@ export class Basketball_Game extends Simulation
                 .times(Mat4.translation( 0,15,-35 ))
                 .times(Mat4.scale( 25,15,0 ));
         this.shapes.square.draw( context, program_state, wall_transform, this.materials.wall);  // Front wall
-
-
       }
   }
