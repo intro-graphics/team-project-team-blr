@@ -153,7 +153,7 @@ export class Basketball_Game extends Simulation
         this.high_score = 0;
 
         // game duration in seconds
-        this.game_time = 120;
+        this.game_time = 10;
         this.last_mouseX = 0;
         this.last_mouseY = 0;
         this.mouse_posX = Array(10).fill(0);
@@ -178,6 +178,8 @@ export class Basketball_Game extends Simulation
       {
         this.mouseDown = true;
         this.launch = false;
+        if (this.game_time - this.time_elapsed_seconds < 0)
+          this.time_elapsed = 0;
       }
 
     unclick(event) 
@@ -251,6 +253,10 @@ export class Basketball_Game extends Simulation
         // update high score if necessary
         if (this.score > this.high_score)
           this.high_score = this.score;
+        
+        // reset score if timer is zero
+        if (this.game_time - this.time_elapsed_seconds < 0)
+          this.score = 0;
 
         // move ball based on velocity, which gets decremented over time 
         for( let b of this.bodies ) {                                         
