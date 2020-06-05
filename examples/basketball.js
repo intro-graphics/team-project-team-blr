@@ -130,7 +130,7 @@ export class Basketball_Game extends Simulation
       
         for( let b of this.bodies )
         {                                         // Gravity on Earth, where 1 unit in world space = 1 meter:
-          b.linear_velocity[1] += dt * -9.8;
+          b.linear_velocity[1] += dt * -0.8;
                                                 // If about to fall through floor, reverse y velocity:
           if( b.center[1] < 1 && b.linear_velocity[1] < 0 )
             b.linear_velocity[1] *= -.8;
