@@ -1,9 +1,70 @@
 import { tiny, defs } from './common.js';
-import { Body, Simulation } from './collisions-demo.js';
+import { Body } from './collisions-demo.js';
 import { Shape_From_File } from './obj-file-demo.js';
 import { Text_Line } from './text-demo.js';
 // Pull these names into this module's scope for convenience:
 const { vec3, unsafe3, vec4, vec, color, Mat4, Light, Shape, Material, Shader, Texture, Scene} = tiny;
+
+export class Simulation extends Scene
+{                                         // **Simulation** manages the stepping of simulation time.  Subclass it when making
+                                          // a Scene that is a physics demo.  This technique is careful to totally decouple
+                                          // the simulation from the frame rate (see below).
+  constructor()
+    { super();
+      Object.assign( this, { time_accumulator: 0, time_scale: 1, t: 0, dt: 1/20, bodies: [], targets: [], steps_taken: 0 } );            
+    }
+  simulate( frame_time )
+    {                                     // simulate(): Carefully advance time according to Glenn Fiedler's 
+                                          // "Fix Your Timestep" blog post.
+                                          // This line gives ourselves a way to trick the simulator into thinking
+                                          // that the display framerate is running fast or slow:
+      frame_time = this.time_scale * frame_time;
+
+                                          // Avoid the spiral of death; limit the amount of time we will spend 
+                                          // computing during this timestep if display lags:
+      this.time_accumulator += Math.min( frame_time, 0.1 );
+                                          // Repeatedly step the simulation until we're caught up with this frame:
+      while ( Math.abs( this.time_accumulator ) >= this.dt )
+      {                                                       // Single step of the simulation for all bodies:
+        this.update_state( this.dt );
+        for( let b of this.bodies )
+          b.advance( this.dt );
+        for( let t of this.targets )
+          t.advance( this.dt );
+                                          // Following the advice of the article, de-couple 
+                                          // our simulation time from our frame rate:
+        this.t                += Math.sign( frame_time ) * this.dt;
+        this.time_accumulator -= Math.sign( frame_time ) * this.dt;
+        this.steps_taken++;
+      }
+                                            // Store an interpolation factor for how close our frame fell in between
+                                            // the two latest simulation time steps, so we can correctly blend the
+                                            // two latest states and display the result.
+      let alpha = this.time_accumulator / this.dt;
+      for( let b of this.bodies ) b.blend_state( alpha );
+      for( let t of this.targets) t.blend_state( alpha );
+    }
+  make_control_panel()
+    {                       // make_control_panel(): Create the buttons for interacting with simulation time.
+      this.key_triggered_button( "Speed up time", [ "Shift","T" ], () => this.time_scale *= 5           );
+      this.key_triggered_button( "Slow down time",        [ "t" ], () => this.time_scale /= 5           ); this.new_line();
+      this.live_string( box => { box.textContent = "Time scale: "  + this.time_scale                  } ); this.new_line();
+      this.live_string( box => { box.textContent = "Fixed simulation time step size: "  + this.dt     } ); this.new_line();
+      this.live_string( box => { box.textContent = this.steps_taken + " timesteps were taken so far." } );
+    }
+  display( context, program_state )
+    {                                     // display(): advance the time and state of our whole simulation.
+      if( program_state.animate ) 
+        this.simulate( program_state.animation_delta_time );
+                                          // Draw each shape at its current location:
+      for( let b of this.bodies ) 
+        b.shape.draw( context, program_state, b.drawn_location, b.material );
+      for( let t of this.targets )
+        t.shape.draw( context, program_state, t.drawn_location, t.material );
+    }
+  update_state( dt )      // update_state(): Your subclass of Simulation has to override this abstract function.
+    { throw "Override this" }
+}
 
 
 export class Basketball_Game extends Simulation
@@ -13,9 +74,10 @@ export class Basketball_Game extends Simulation
         this.mouse_enabled_canvases = new Set();
 
         this.shapes = {  square:    new defs.Square(),
-                         sphere4:   new defs.Subdivision_Sphere( 4 ),
+                         ball:   new defs.Subdivision_Sphere( 4 ),
+                         target: new defs.Subdivision_Sphere( 4 ),
                          cube:      new defs.Cube(),
-                         hoop:      new Shape_From_File("assets/basketball_hoop.obj"),
+//                          hoop:      new Shape_From_File("assets/basketball_hoop.obj"),
                          text:      new Text_Line(10)
                        };
                                      
@@ -52,12 +114,17 @@ export class Basketball_Game extends Simulation
                         diffusivity: 0,
                         specularity: 0,
                         texture: new Texture("assets/walls.png") }),
-
-            hoop:     new Material( t_phong, {
+            
+            target:   new Material( phong, {color: color(1,0,0,1),
                         ambient: 1,
                         diffusivity: 0,
-                        specularity: 0,
-                        texture: new Texture("assets/basketball_hoop_re.jpg") })
+                        specularity: 0, })
+
+//          hoop:     new Material( t_phong, {
+//                      ambient: 1,
+//                      diffusivity: 0,
+//                      specularity: 0,
+//                      texture: new Texture("assets/basketball_hoop_re.jpg") })
           };
 
         this.colliders = [
@@ -67,7 +134,7 @@ export class Basketball_Game extends Simulation
                        ];
         this.collider_selection = 0;
         this.inactive_color = new Material( bump, { color: color( .5,.5,.5,1 ), ambient: .2 });
-        this.active_color = this.inactive_color.override( { color: color( .5,0,0,1 ), ambient: .5 } );
+        this.active_color = this.inactive_color.override( { color: color( 0,0.5,0,1 ), ambient: .5 } );
         this.bright = new Material( phong, { color: color( 0,1,0,.5 ), ambient: 1 });
 
         /* ================================= ATTRIBUTES FOR BASKETBALL_SCENE ========================================= */
@@ -157,17 +224,19 @@ export class Basketball_Game extends Simulation
                       // scene should do to its bodies every frame -- including applying forces.
                       // Generate additional moving bodies if there ever aren't enough:
         let mouse_vel = Math.min((this.mouseY - this.mouse_pos[0])/(150*dt), 1);
-        
-        // Create the backboard object 
-        if( this.launch && this.bodies.length === 0 ) {
-          let ht = this.hoop_transform;
-          this.bodies.push( new Body( this.shapes.hoop, this.materials.hoop, vec3( 1.3,1.15,1.3 )).emplace(  ht, vec3(0,0,0), 0));
-        }
 
         // Create the ball object if user has thrown the ball  
-        if( this.launch && this.bodies.length < 2 ) {
+        if( this.launch && this.bodies.length < 1 ) {
           let bt = this.ball_transform;
-          this.bodies.push( new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( bt, vec3(0, 9, -4).times(mouse_vel), -0.5, vec3(1, 0, 0) ));
+          this.bodies.push( new Body( this.shapes.ball, this.materials.ball, vec3( 1,1,1 ) ).emplace( bt, vec3(0, 9, -4).times(mouse_vel), -0.5, vec3(1, 0, 0) ));
+        }
+        
+        while( this.targets.length < 1 ) {
+            let rand_x = Math.floor(Math.random() * 41) - 20;
+            let rand_y = Math.floor(Math.random() * 21);
+            console.log(rand_x, rand_y);
+            let tt = Mat4.translation( rand_x, rand_y, -35 );
+            this.targets.push( new Body( this.shapes.target, this.materials.target, vec3( 1.5,1.5,0.15 ) ).emplace( tt, vec3(0,0,0), 0));
         }
 
         // increment timer
@@ -179,10 +248,10 @@ export class Basketball_Game extends Simulation
           this.high_score = this.score;
 
         // move ball based on velocity, which gets decremented over time 
-        let b = this.bodies[1];
-        if( b ) {                                         
-          b.linear_velocity[1] += dt * -2.8;
-          
+
+        for( let b of this.bodies ) {                                         
+          b.linear_velocity[1] += dt * -1.8;
+
           // If about to fall through floor, reverse y velocity:
           if( b.center[1] < 1 && b.linear_velocity[1] < 0 ) {
             b.linear_velocity[1] *= -0.8;   // Dampen y velocity and angular velocity
@@ -203,6 +272,7 @@ export class Basketball_Game extends Simulation
         // Check for collisions between bodies
         const collider = this.colliders[ this.collider_selection ];
         let a = this.bodies[0];
+        let b = this.targets[0];
         if( a )
         {
           a.inverse = Mat4.inverse( a.drawn_location );
@@ -211,8 +281,7 @@ export class Basketball_Game extends Simulation
             if( a.check_if_colliding( b, collider ) )
             {
               console.log("Collision detected");      // If we get here, we collided, so turn red and zero out the
-              a.material = this.active_color;         // velocity so they don't inter-penetrate any further.
-              this.score += 3;
+              this.targets.pop();                    // velocity so they don't inter-penetrate any further.
             }
           }
         }
@@ -250,15 +319,10 @@ export class Basketball_Game extends Simulation
         {
           this.ball_transform = Mat4.translation(0 + this.mouseX, 1, -5);
         }
-        
-        // Draw the basketball hoop
-        this.hoop_transform = Mat4.translation(0,15.35,-23.5);
 
         if (this.launch === false) {
           this.bodies = [];
-          let ht = this.hoop_transform.times(Mat4.scale( 1.3,1.14,1.3 ));
-          this.shapes.hoop.draw( context, program_state, ht, this.materials.hoop );
-          this.shapes.sphere4.draw( context, program_state, this.ball_transform, this.materials.ball );
+          this.shapes.ball.draw( context, program_state, this.ball_transform, this.materials.ball );
         }
 
         // Draw the scoreboard
@@ -267,37 +331,37 @@ export class Basketball_Game extends Simulation
         this.shapes.cube.draw( context, program_state, scoreboard_transform, this.materials.board);
 
         // Draw "TIMER"
-        let timer_title_transform = Mat4.translation( -20.5,21,-30 )
-                .times(Mat4.scale(0.5, 0.5, 0.5));
+        let timer_title_transform = Mat4.translation( -23,22.5,-34.7 )
+                .times(Mat4.scale(0.65, 0.65, 0.65));
         this.shapes.text.set_string( "TIMER", context.context );
         this.shapes.text.draw( context, program_state, timer_title_transform, this.materials.text_img );
 
         // Draw "SCORE"
-        let score_title_transform = Mat4.translation( -20.5,19,-30 )
-                .times(Mat4.scale(0.5, 0.5, 0.5));
+        let score_title_transform = Mat4.translation( -23,20,-34.7 )
+                .times(Mat4.scale(0.65, 0.65, 0.65));
         this.shapes.text.set_string( "SCORE", context.context );
         this.shapes.text.draw( context, program_state, score_title_transform, this.materials.text_img );
 
         // Draw "HIGH SCORE"
-        let high_score_title_transform = Mat4.translation( -20.5,17,-30 )
-                .times(Mat4.scale(0.5, 0.5, 0.5));
+        let high_score_title_transform = Mat4.translation( -23,17.5,-34.7 )
+                .times(Mat4.scale(0.65, 0.65, 0.65));
         this.shapes.text.set_string( "HIGH SCORE", context.context );
         this.shapes.text.draw( context, program_state, high_score_title_transform, this.materials.text_img );
 
         // Draw timer text
-        let timer_text_transform = Mat4.translation( -14.5,21,-30 )
+        let timer_text_transform = Mat4.translation( -15.8,22.5,-34.7 )
                 .times(Mat4.scale(0.75, 0.75, 0.75));
         this.shapes.text.set_string( this.get_timer_text(this.time_elapsed), context.context );
         this.shapes.text.draw( context, program_state, timer_text_transform, this.materials.text_img );
 
         // Draw score text
-        let score_text_transform = Mat4.translation( -11.1,19,-30 )
+        let score_text_transform = Mat4.translation( -12.5,20,-34.7 )
                 .times(Mat4.scale(0.75, 0.75, 0.75));
         this.shapes.text.set_string( this.get_score_text(this.score), context.context );
         this.shapes.text.draw( context, program_state, score_text_transform, this.materials.text_img );
 
         // Draw high score text
-        let high_score_text_transform = Mat4.translation( -11.1,17,-30 )
+        let high_score_text_transform = Mat4.translation( -12.5,17.5,-34.7 )
                 .times(Mat4.scale(0.75, 0.75, 0.75));
         this.shapes.text.set_string( this.get_score_text(this.high_score), context.context );
         this.shapes.text.draw( context, program_state, high_score_text_transform, this.materials.text_img );
