@@ -60,12 +60,25 @@ export class Basketball_Game extends Simulation
                         texture: new Texture("assets/basketball_hoop_re.jpg") })
           };
 
+        this.colliders = [
+        { intersect_test: Body.intersect_sphere, points: new defs.Subdivision_Sphere(1), leeway: .5 },
+        { intersect_test: Body.intersect_sphere, points: new defs.Subdivision_Sphere(2), leeway: .3 },
+        { intersect_test: Body.intersect_cube,   points: new defs.Cube(),                leeway: .1 }
+                       ];
+        this.collider_selection = 0;
+        this.inactive_color = new Material( bump, { color: color( .5,.5,.5,1 ), ambient: .2 });
+        this.active_color = this.inactive_color.override( { color: color( .5,0,0,1 ), ambient: .5 } );
+        this.bright = new Material( phong, { color: color( 0,1,0,.5 ), ambient: 1 });
+
         /* ================================= ATTRIBUTES FOR BASKETBALL_SCENE ========================================= */
 
         this.launch = false;
         this.mouseDown = false;
         this.mouseX = 0;
         this.mouseY = 0;
+        this.last_mouseX = 0;
+        this.last_mouseY = 0;
+        this.mouse_pos = Array(10).fill(0);
 
         this.time_elapsed = 0;
         this.time_elapsed_seconds = 0;
@@ -74,9 +87,6 @@ export class Basketball_Game extends Simulation
 
         // game duration in seconds
         this.game_time = 120;
-        this.last_mouseX = 0;
-        this.last_mouseY = 0;
-        this.mouse_pos = Array(10).fill(0);
       }
 
     add_mouse_controls( canvas )
@@ -114,12 +124,6 @@ export class Basketball_Game extends Simulation
         }
       }
 
-
-    make_control_panel()            // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
-      { this.key_triggered_button( "View scene",  [ "0" ], () => this.attached = () => this.initial_camera_location );
-        this.new_line();
-        //super.make_control_panel();
-      }
     get_timer_text(time_elapsed)
       {
         let total_seconds = this.game_time - this.time_elapsed_seconds;
@@ -131,24 +135,38 @@ export class Basketball_Game extends Simulation
         let seconds_text = seconds < 10 ? "0" + seconds.toString() : seconds.toString();
         return minutes_text + ":" + seconds_text;
       }
+
     get_score_text(score)
       {
         let score_text = score < 10 ? "0" + score.toString() : score.toString();
         return score_text;
       }
+
+    make_control_panel()            // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
+      { this.key_triggered_button( "View scene",  [ "0" ], () => this.attached = () => this.initial_camera_location );
+        this.new_line();
+        this.key_triggered_button( "Previous collider", [ "b" ], this.decrease );
+        this.key_triggered_button( "Next",              [ "n" ], this.increase );
+        //super.make_control_panel();
+      }
+    increase() { this.collider_selection = Math.min( this.collider_selection + 1, this.colliders.length-1 ); }
+    decrease() { this.collider_selection = Math.max( this.collider_selection - 1, 0 ) }
+
     update_state( dt )
       {               // update_state():  Override the base time-stepping code to say what this particular
                       // scene should do to its bodies every frame -- including applying forces.
                       // Generate additional moving bodies if there ever aren't enough:
         let mouse_vel = Math.min((this.mouseY - this.mouse_pos[0])/(150*dt), 1);
         
+        // Create the backboard object 
         if( this.bodies.length === 0 ) {
           this.bodies.push( new Body( this.shapes.hoop, this.materials.hoop, vec3( 1.3,1.15,1.3 )).emplace(  this.hoop_transform, vec3(0,0,0), 0));
         }
 
+        // Create the ball object if user has thrown the ball  
         if( this.launch === true && this.bodies.length < 2 ) {
           let bt = this.ball_transform;
-          this.bodies.push( new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( bt, vec3(0, 9, -4).times(mouse_vel), 0.5, vec3(1, 0, 0) ));
+          this.bodies.push( new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( bt, vec3(0, 9, -4).times(mouse_vel), -0.5, vec3(1, 0, 0) ));
         }
 
         // increment timer
@@ -159,28 +177,43 @@ export class Basketball_Game extends Simulation
         if (this.score > this.high_score)
           this.high_score = this.score;
 
-        // move ball based on velocity
+        // move ball based on velocity, which gets decremented over time 
         let b = this.bodies[1];
-        if( b )
-        {                                         // Gravity on Earth, where 1 unit in world space = 1 meter:
+        if( b ) {                                         
           b.linear_velocity[1] += dt * -2.8;
-                                                // If about to fall through floor, reverse y velocity:
+          
+          // If about to fall through floor, reverse y velocity:
           if( b.center[1] < 1 && b.linear_velocity[1] < 0 ) {
-            // Dampen y velocity and angular velocity
-            b.linear_velocity[1] *= -0.8;
+            b.linear_velocity[1] *= -0.8;   // Dampen y velocity and angular velocity
             b.angular_velocity *= 0.8;
           }
 
           if( b.center[2] < -34 && b.linear_velocity[2] < 0 ) {
-            // Dampen z velocity and angular velocity  
-            b.linear_velocity[2] *= -0.8;
+            b.linear_velocity[2] *= -0.8;   // Dampen z velocity and angular velocity 
+            b.angular_velocity *= -0.8;
           }
-
         }
+
         this.last_mouseX = this.mouseX;
         this.last_mouseY = this.mouseY;
         this.mouse_pos.shift();
         this.mouse_pos[9] = this.mouseY;
+
+        // Check for collisions between bodies
+        const collider = this.colliders[ this.collider_selection ];
+        let a = this.bodies[0];
+        if( a )
+        {
+          a.inverse = Mat4.inverse( a.drawn_location );
+          if ( b )
+          {
+            if( a.check_if_colliding( b, collider ) )
+            {
+              console.log("Collision detected");      // If we get here, we collided, so turn red and zero out the
+              a.material = this.active_color;         // velocity so they don't inter-penetrate any further.
+            }
+          }
+        }
       }
 
 
