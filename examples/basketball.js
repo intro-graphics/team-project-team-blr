@@ -65,9 +65,6 @@ export class Basketball_Game extends Simulation
 //         mainCanvas.addEventListener("mousemove", this.track.bind(this));
 //         mainCanvas.addEventListener("mousedown", this.click.bind(this));
 //         mainCanvas.addEventListener("mouseup", this.unclick.bind(this));
-//         this.mouseX = 0;
-//         this.mouseY = 0;
-//         this.mouseDown = false;
 
            
 
@@ -94,6 +91,7 @@ export class Basketball_Game extends Simulation
     click(event) 
       {
         this.mouseDown = true;
+        this.launch = false;
       }
 
     unclick(event) 
@@ -131,7 +129,15 @@ export class Basketball_Game extends Simulation
             let bt = this.ball_transform;
             this.bodies.push( new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( bt, vec3( 0,0,0 ), 0 ));
         }
-        console.log(this.ball_transform);
+
+        // move ball based on velocity
+        for( let b of this.bodies )
+        {                                         // Gravity on Earth, where 1 unit in world space = 1 meter:
+          b.linear_velocity[1] += dt * -0.8;
+                                                // If about to fall through floor, reverse y velocity:
+          if( b.center[1] < 1 && b.linear_velocity[1] < 0 )
+            b.linear_velocity[1] *= -.8;
+        }
       }
 
 
@@ -168,8 +174,10 @@ export class Basketball_Game extends Simulation
           //this.bodies.push( new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( ball_transform, vec3( 0,0,0 ), vec3( 0,0,0 ) ));
           //this.shapes.sphere4.draw( context, program_state, ball_transform, this.materials.ball );
         }
-        if (this.launch === false)
-            this.shapes.sphere4.draw( context, program_state, this.ball_transform, this.materials.ball );
+        if (this.launch === false) {
+          this.bodies = [];
+          this.shapes.sphere4.draw( context, program_state, this.ball_transform, this.materials.ball );
+        }
         //new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( ball_transform, vec3( 0,0,0 ), vec3( 0,0,0 ) );
 
         // Draw the basketball hoop
