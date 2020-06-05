@@ -76,6 +76,7 @@ export class Basketball_Game extends Simulation
         this.mouseY = 0;
         this.last_mouseX = 0;
         this.last_mouseY = 0;
+        this.mouse_pos = Array(100).fill(0);
       }
 
     add_mouse_controls( canvas )
@@ -126,11 +127,11 @@ export class Basketball_Game extends Simulation
       {               // update_state():  Override the base time-stepping code to say what this particular
                       // scene should do to its bodies every frame -- including applying forces.
                       // Generate additional moving bodies if there ever aren't enough:
-        let mouse_vel = (this.mouseX - this.last_mouseX)/dt;
+        let mouse_vel = (this.mouseY - this.last_mouseY)/(dt*10);
                       
         if( this.launch === true && this.bodies.length < 1 ) {
           let bt = this.ball_transform;
-          this.bodies.push( new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( bt, vec3(0, mouse_vel, mouse_vel), 0.5, vec3(1, 0, 0) ));
+          this.bodies.push( new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( bt, vec3(0, 3, -4.5), 0.5, vec3(1, 0, 0) ));
         }
 
         // move ball based on velocity
