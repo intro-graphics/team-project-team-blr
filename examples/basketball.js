@@ -76,7 +76,8 @@ export class Basketball_Game extends Simulation
         this.game_time = 120;
         this.last_mouseX = 0;
         this.last_mouseY = 0;
-        this.mouse_pos = Array(10).fill(0);
+        this.mouse_posX = Array(10).fill(0);
+        this.mouse_posY = Array(10).fill(0);
       }
 
     add_mouse_controls( canvas )
@@ -140,7 +141,8 @@ export class Basketball_Game extends Simulation
       {               // update_state():  Override the base time-stepping code to say what this particular
                       // scene should do to its bodies every frame -- including applying forces.
                       // Generate additional moving bodies if there ever aren't enough:
-        let mouse_vel = Math.min((this.mouseY - this.mouse_pos[0])/(150*dt), 1);
+        let mouse_velY = Math.min((this.mouseY - this.mouse_posY[0])/(150*dt), 1);
+        let mouse_velX = (this.mouseX - this.mouse_posX[0])/(150*dt);
         
         //console.log(this.bodies.length);
         if( this.launch && this.bodies.length === 0 ) {
@@ -150,7 +152,8 @@ export class Basketball_Game extends Simulation
 
         if( this.launch && this.bodies.length < 2 ) {
           let bt = this.ball_transform;
-          this.bodies.push( new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( bt, vec3(0, 9, -4).times(mouse_vel), 0.5, vec3(1, 0, 0) ));
+          console.log(this.mouse_posX);
+          this.bodies.push( new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( bt, vec3(3*mouse_velX, 6*mouse_velY, -8*mouse_velY), 0.5, vec3(1, 0, 0) ));
         }
 
         // increment timer
@@ -181,10 +184,12 @@ export class Basketball_Game extends Simulation
         }
         this.last_mouseX = this.mouseX;
         this.last_mouseY = this.mouseY;
-        this.mouse_pos.shift();
-        this.mouse_pos[9] = this.mouseY;
+        this.mouse_posY.shift();
+        this.mouse_posY[9] = this.mouseY;
+        this.mouse_posX.shift();
+        this.mouse_posX[9] = this.mouseX;
 
-        console.log(this.bodies);
+        //console.log(this.bodies);
       }
 
 
