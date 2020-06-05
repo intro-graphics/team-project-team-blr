@@ -154,8 +154,8 @@ export class Basketball_Game extends Simulation
         this.score = 0;
         this.high_score = 0;
 
-        // game duration in seconds
-        this.game_time = 120;
+        this.game_time = 120; // seconds
+        this.bonus_time = 10; // seconds
         this.last_mouseX = 0;
         this.last_mouseY = 0;
         this.mouse_posX = Array(10).fill(0);
@@ -302,7 +302,7 @@ export class Basketball_Game extends Simulation
             {
               // increment score only if launch has not had a collision yet
               if (this.has_collided === false) {
-                if (this.game_time - this.time_elapsed_seconds < 10)
+                if (this.game_time - this.time_elapsed_seconds < this.bonus_time)
                   this.score += 5;
                 else
                   this.score += 1;
@@ -360,8 +360,8 @@ export class Basketball_Game extends Simulation
                 .times(Mat4.scale( 7,4,.25 ));
         this.shapes.cube.draw( context, program_state, scoreboard_transform, this.materials.board);
 
-        // Draw "BONUS!" only for last 10 seconds
-        if (this.game_time - this.time_elapsed_seconds < 10) {
+        // Draw "BONUS!" only for last x seconds, where x is bonus time
+        if (this.game_time - this.time_elapsed_seconds < this.bonus_time) {
           let bonus_text_transform = Mat4.translation( -10,10,-34.99 )
                   .times(Mat4.scale( 3,3,.25 ));
           this.shapes.text.set_string( "BONUS!", context.context );
