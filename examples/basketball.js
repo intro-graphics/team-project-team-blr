@@ -67,11 +67,15 @@ export class Basketball_Game extends Simulation
 //         mainCanvas.addEventListener("mousedown", this.click.bind(this));
 //         mainCanvas.addEventListener("mouseup", this.unclick.bind(this));
 
+           
+
         /* =========================================================================================================== */
         this.launch = false;
         this.mouseDown = false;
         this.mouseX = 0;
         this.mouseY = 0;
+        this.last_mouseX = 0;
+        this.last_mouseY = 0;
       }
 
     add_mouse_controls( canvas )
@@ -94,7 +98,6 @@ export class Basketball_Game extends Simulation
       {
         this.mouseDown = true;
         this.launch = false;
-        
       }
 
     unclick(event) 
@@ -123,9 +126,11 @@ export class Basketball_Game extends Simulation
       {               // update_state():  Override the base time-stepping code to say what this particular
                       // scene should do to its bodies every frame -- including applying forces.
                       // Generate additional moving bodies if there ever aren't enough:
+        let mouse_vel = (this.mouseX - this.last_mouseX)/dt;
+                      
         if( this.launch === true && this.bodies.length < 1 ) {
-            let bt = this.ball_transform;
-            this.bodies.push( new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( bt, vec3( 0,0,0 ), 0 ));
+          let bt = this.ball_transform;
+          this.bodies.push( new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( bt, vec3(0, mouse_vel, mouse_vel), 0.5, vec3(1, 0, 0) ));
         }
 
         // move ball based on velocity
@@ -133,9 +138,14 @@ export class Basketball_Game extends Simulation
         {                                         // Gravity on Earth, where 1 unit in world space = 1 meter:
           b.linear_velocity[1] += dt * -0.8;
                                                 // If about to fall through floor, reverse y velocity:
-          if( b.center[1] < 1 && b.linear_velocity[1] < 0 )
-            b.linear_velocity[1] *= -.8;
+          if( b.center[1] < 1 && b.linear_velocity[1] < 0 ) {
+            // Dampen y velocity and angular velocity
+            b.linear_velocity[1] *= -0.8;
+            b.angular_velocity *= 0.8;
+          }
         }
+        this.last_mouseX = this.mouseX;
+        this.last_mouseY = this.mouseY;
       }
 
 
@@ -170,6 +180,11 @@ export class Basketball_Game extends Simulation
         {
           this.ball_transform = Mat4.translation(0 + this.mouseX, 1, -5);
         }
+        if (this.launch === false) {
+          this.bodies = [];
+          this.shapes.sphere4.draw( context, program_state, this.ball_transform, this.materials.ball );
+        }
+        //new Body( this.shapes.sphere4, this.materials.ball, vec3( 1,1,1 ) ).emplace( ball_transform, vec3( 0,0,0 ), vec3( 0,0,0 ) );
 
         if (this.launch === false) {
             this.bodies = [];
