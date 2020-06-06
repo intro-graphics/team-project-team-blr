@@ -119,7 +119,12 @@ export class Basketball_Game extends Simulation
                         ambient: 1,
                         diffusivity: 0,
                         specularity: 0, 
-                        texture: new Texture("assets/target.png") })
+                        texture: new Texture("assets/target.png") }),
+            ucla_w:   new Material( t_phong, {
+                        ambient: 1,
+                        diffusivity: 0,
+                        specularity: 0,
+                        texture: new Texture("assets/ucla.png") })
 
 //          hoop:     new Material( t_phong, {
 //                      ambient: 1,
@@ -153,6 +158,7 @@ export class Basketball_Game extends Simulation
         this.time_elapsed_seconds = 0;
         this.score = 0;
         this.high_score = 0;
+        this.congrats = "";
 
         this.game_time = 120; // seconds
         this.bonus_time = 30; // seconds
@@ -181,8 +187,10 @@ export class Basketball_Game extends Simulation
         this.mouseDown = true;
         this.launch = false;
         this.has_collided = false;
-        if (this.game_time - this.time_elapsed_seconds < 0)
+        if (this.game_time - this.time_elapsed_seconds < 0) {
           this.time_elapsed = 0;
+          this.score = 0;
+        }
       }
 
     unclick(event) 
@@ -257,10 +265,12 @@ export class Basketball_Game extends Simulation
         // update high score if necessary
         if (this.score > this.high_score)
           this.high_score = this.score;
-        
-        // reset score if timer is zero
-        if (this.game_time - this.time_elapsed_seconds < 0)
-          this.score = 0;
+
+        // set congrats at the end of the game
+        if (this.game_time - this.time_elapsed_seconds <= 0) {
+          this.congrats = this.score.toString()
+          ;
+        }
 
         // move ball based on velocity, which gets decremented over time 
         for( let b of this.bodies ) {                                         
@@ -361,11 +371,39 @@ export class Basketball_Game extends Simulation
         this.shapes.cube.draw( context, program_state, scoreboard_transform, this.materials.board);
 
         // Draw "BONUS!" only for last x seconds, where x is bonus time
-        if (this.game_time - this.time_elapsed_seconds < this.bonus_time) {
+        if (this.game_time - this.time_elapsed_seconds < this.bonus_time && this.game_time - this.time_elapsed_seconds > 0) {
           let bonus_text_transform = Mat4.translation( -10,10,-34.99 )
                   .times(Mat4.scale( 3,3,.25 ));
           this.shapes.text.set_string( "Bonus!", context.context );
           this.shapes.text.draw( context, program_state, bonus_text_transform, this.materials.text_img );
+        }
+
+        // Draw congrats text at the end
+        if (this.game_time - this.time_elapsed_seconds <= 0) {
+          let congrats_text_1_transform = Mat4.translation( -20,5,-34.99 )
+                  .times(Mat4.scale( 1,1,.25 ));
+          let congrats_text_1 = this.congrats + " congrats";
+          this.shapes.text.set_string( congrats_text_1, context.context );
+          this.shapes.text.draw( context, program_state, congrats_text_1_transform, this.materials.text_img );
+
+          let congrats_text_2_transform = Mat4.translation( -20,3,-34.99 )
+                  .times(Mat4.scale( 1,1,.25 ));
+          let congrats_text_2 = "to UCLA";
+          this.shapes.text.set_string( congrats_text_2, context.context );
+          this.shapes.text.draw( context, program_state, congrats_text_2_transform, this.materials.text_img );
+
+          let congrats_text_3_transform = Mat4.translation( -20,1,-34.99 )
+                  .times(Mat4.scale( 1,1,.25 ));
+          let congrats_text_3 = "graduates!";
+          this.shapes.text.set_string( congrats_text_3, context.context );
+          this.shapes.text.draw( context, program_state, congrats_text_3_transform, this.materials.text_img );
+
+          let wall_transform = Mat4.identity()
+                .times(Mat4.rotation( -Math.PI/2, 0,1,0 ))
+                .times(Mat4.rotation( Math.PI/2, 0,1,0 ))
+                .times(Mat4.translation( -2,11,-34.999 ))
+                .times(Mat4.scale( 28,12,0 ));
+          this.shapes.square.draw( context, program_state, wall_transform, this.materials.ucla_w);
         }
 
         // Draw "TIMER"
